@@ -47,4 +47,5 @@ dependencies {
   "ksp"("com.github.bumptech.glide:ksp:4.16.0")
   implementation("androidx.media3:media3-exoplayer:1.2.1")
   implementation("androidx.media3:media3-ui:1.2.1")
+  implementation("androidx.media3:media3-ui-leanback:1.2.1")
 }
