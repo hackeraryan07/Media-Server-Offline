@@ -13,15 +13,14 @@
 		android:layout_centerInParent="true"
         app:use_controller="false" />
 
-	<TextView
-		android:id="@+id/playerLoadingText"
-		android:layout_width="wrap_content"
-		android:layout_height="wrap_content"
-		android:text="Loading..."
-		android:textSize="16sp"
-		android:textColor="#ffffff"
+	<ProgressBar
+		android:id="@+id/playerLoadingSpinner"
+		android:layout_width="64dp"
+		android:layout_height="64dp"
 		android:layout_centerInParent="true"
-		android:visibility="visible"/>
+		android:indeterminate="true"
+		android:visibility="visible"
+		android:indeterminateTint="#ffffff" />
 
 	<RelativeLayout
 		android:id="@+id/playerControlsOverlay"
@@ -206,20 +205,11 @@
 				android:id="@+id/playerSeekBar"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:layout_marginLeft="16dp"
-				android:layout_marginRight="16dp"
+				android:layout_marginLeft="8dp"
+				android:layout_marginRight="8dp"
 				android:layout_marginBottom="2dp"
 				android:paddingLeft="0dp"
-				android:paddingRight="0dp"
-				app:bar_height="4dp"
-				app:touch_target_height="16dp"
-				app:scrubber_enabled_size="10dp"
-				app:scrubber_disabled_size="0dp"
-				app:scrubber_dragged_size="12dp"
-				app:scrubber_color="@color/accent_color"
-				app:played_color="@color/accent_color"
-				app:unplayed_color="#33ffffff"
-				app:buffered_color="#66ffffff" />
+				android:paddingRight="0dp" />
 
 			<LinearLayout
 				android:layout_width="match_parent"

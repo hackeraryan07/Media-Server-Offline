@@ -26,6 +26,7 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var timeBar: DefaultTimeBar
     private lateinit var txtCurrentTime: TextView
     private lateinit var txtTotalTime: TextView
+    private lateinit var loadingSpinner: android.widget.ProgressBar
     
     private val hideHandler = Handler(Looper.getMainLooper())
     private var videoUrlString: String? = null
@@ -78,6 +79,7 @@ class PlayerActivity : AppCompatActivity() {
             timeBar = findViewById(R.id.playerSeekBar)
             txtCurrentTime = findViewById(R.id.playerCurrentTime)
             txtTotalTime = findViewById(R.id.playerTotalTime)
+            loadingSpinner = findViewById(R.id.playerLoadingSpinner)
     
             timeBar.addListener(object : androidx.media3.ui.TimeBar.OnScrubListener {
                 override fun onScrubStart(timeBar: androidx.media3.ui.TimeBar, position: Long) {
@@ -290,6 +292,12 @@ class PlayerActivity : AppCompatActivity() {
             }
             
             override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_BUFFERING) {
+                    loadingSpinner.visibility = View.VISIBLE
+                } else {
+                    loadingSpinner.visibility = View.GONE
+                }
+                
                 if (playbackState == Player.STATE_ENDED) {
                     val finalDuration = exoPlayer?.duration?.takeIf { it > 0 } ?: currentVideo?.totalDuration ?: 0L
                     currentVideo?.let { video ->
@@ -402,6 +410,13 @@ class PlayerActivity : AppCompatActivity() {
         if (event.action == KeyEvent.ACTION_DOWN) {
             if (overlay.visibility != View.VISIBLE) {
                 showMetadataTemp()
+                return true
+            }
+            if ((event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER) && currentFocus == timeBar) {
+                exoPlayer?.let {
+                    if (it.isPlaying) it.pause() else it.play()
+                }
+                scheduleMetadataHide()
                 return true
             }
             scheduleMetadataHide()
