@@ -426,8 +426,11 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun showMetadataTemp() {
+        val wasHidden = overlay.visibility != View.VISIBLE
         overlay.visibility = View.VISIBLE
-        btnPlayPause.requestFocus()
+        if (wasHidden) {
+            btnPlayPause.requestFocus()
+        }
         scheduleMetadataHide()
     }
 
