@@ -410,7 +410,8 @@ class PlayerActivity : AppCompatActivity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
             if (overlay.visibility != View.VISIBLE) {
-                showMetadataTemp()
+                val focusOnSeekBar = event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT || event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+                showMetadataTemp(focusOnSeekBar)
                 return true
             }
             if ((event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER) && currentFocus == timeBar) {
@@ -425,11 +426,15 @@ class PlayerActivity : AppCompatActivity() {
         return super.dispatchKeyEvent(event)
     }
 
-    private fun showMetadataTemp() {
+    private fun showMetadataTemp(focusOnSeekBar: Boolean = false) {
         val wasHidden = overlay.visibility != View.VISIBLE
         overlay.visibility = View.VISIBLE
         if (wasHidden) {
-            btnPlayPause.requestFocus()
+            if (focusOnSeekBar) {
+                timeBar.requestFocus()
+            } else {
+                btnPlayPause.requestFocus()
+            }
         }
         scheduleMetadataHide()
     }
