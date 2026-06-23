@@ -7,7 +7,7 @@ import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
 import android.widget.TextView
-import androidx.fragment.app.FragmentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -16,7 +16,7 @@ import androidx.media3.ui.DefaultTimeBar
 import org.json.JSONObject
 import android.widget.Toast
 
-class PlayerActivity : FragmentActivity() {
+class PlayerActivity : AppCompatActivity() {
 
     private lateinit var playerView: PlayerView
     private var exoPlayer: ExoPlayer? = null
@@ -67,67 +67,78 @@ class PlayerActivity : FragmentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_player)
-
-        playerView = findViewById(R.id.internalVideoView)
-        overlay = findViewById(R.id.playerControlsOverlay)
-        titleText = findViewById(R.id.playerTitleText)
-        btnPlayPause = findViewById(R.id.playerPlayPauseBtn)
-        timeBar = findViewById(R.id.playerSeekBar)
-        txtCurrentTime = findViewById(R.id.playerCurrentTime)
-        txtTotalTime = findViewById(R.id.playerTotalTime)
-
-        timeBar.addListener(object : androidx.media3.ui.TimeBar.OnScrubListener {
-            override fun onScrubStart(timeBar: androidx.media3.ui.TimeBar, position: Long) {
-                exoPlayer?.pause()
+        try {
+            super.onCreate(savedInstanceState)
+            setContentView(R.layout.activity_player)
+    
+            playerView = findViewById(R.id.internalVideoView)
+            overlay = findViewById(R.id.playerControlsOverlay)
+            titleText = findViewById(R.id.playerTitleText)
+            btnPlayPause = findViewById(R.id.playerPlayPauseBtn)
+            timeBar = findViewById(R.id.playerSeekBar)
+            txtCurrentTime = findViewById(R.id.playerCurrentTime)
+            txtTotalTime = findViewById(R.id.playerTotalTime)
+    
+            timeBar.addListener(object : androidx.media3.ui.TimeBar.OnScrubListener {
+                override fun onScrubStart(timeBar: androidx.media3.ui.TimeBar, position: Long) {
+                    exoPlayer?.pause()
+                    scheduleMetadataHide()
+                }
+                override fun onScrubMove(timeBar: androidx.media3.ui.TimeBar, position: Long) {
+                    txtCurrentTime.text = formatTime(position)
+                    scheduleMetadataHide()
+                }
+                override fun onScrubStop(timeBar: androidx.media3.ui.TimeBar, position: Long, canceled: Boolean) {
+                    exoPlayer?.seekTo(position)
+                    exoPlayer?.play()
+                    scheduleMetadataHide()
+                }
+            })
+    
+            findViewById<View>(R.id.btnNext).setOnClickListener {
+                exoPlayer?.seekToNextMediaItem()
                 scheduleMetadataHide()
             }
-            override fun onScrubMove(timeBar: androidx.media3.ui.TimeBar, position: Long) {
-                txtCurrentTime.text = formatTime(position)
+            findViewById<View>(R.id.btnPrevious).setOnClickListener {
+                exoPlayer?.seekToPreviousMediaItem()
                 scheduleMetadataHide()
             }
-            override fun onScrubStop(timeBar: androidx.media3.ui.TimeBar, position: Long, canceled: Boolean) {
-                exoPlayer?.seekTo(position)
-                exoPlayer?.play()
+            findViewById<View>(R.id.btnForward10).setOnClickListener {
+                exoPlayer?.let { it.seekTo(it.currentPosition + 10000) }
                 scheduleMetadataHide()
             }
-        })
-
-        findViewById<View>(R.id.btnNext).setOnClickListener {
-            exoPlayer?.seekToNextMediaItem()
-            scheduleMetadataHide()
-        }
-        findViewById<View>(R.id.btnPrevious).setOnClickListener {
-            exoPlayer?.seekToPreviousMediaItem()
-            scheduleMetadataHide()
-        }
-        findViewById<View>(R.id.btnForward10).setOnClickListener {
-            exoPlayer?.let { it.seekTo(it.currentPosition + 10000) }
-            scheduleMetadataHide()
-        }
-        findViewById<View>(R.id.btnReplay10).setOnClickListener {
-            exoPlayer?.let { it.seekTo(Math.max(0, it.currentPosition - 10000)) }
-            scheduleMetadataHide()
-        }
-        btnPlayPause.setOnClickListener {
-            exoPlayer?.let {
-                if (it.isPlaying) it.pause() else it.play()
+            findViewById<View>(R.id.btnReplay10).setOnClickListener {
+                exoPlayer?.let { it.seekTo(Math.max(0, it.currentPosition - 10000)) }
+                scheduleMetadataHide()
             }
-            scheduleMetadataHide()
-        }
-        findViewById<View>(R.id.playerBackBtn).setOnClickListener { finish() }
-
-        currentVideo = intent.getSerializableExtra("video") as? TvVideo
-        playlist = intent.getSerializableExtra("playlist") as? ArrayList<TvVideo>
-        currentIndex = intent.getIntExtra("currentIndex", 0)
-
-        if (currentVideo == null) {
+            btnPlayPause.setOnClickListener {
+                exoPlayer?.let {
+                    if (it.isPlaying) it.pause() else it.play()
+                }
+                scheduleMetadataHide()
+            }
+            findViewById<View>(R.id.playerBackBtn).setOnClickListener { finish() }
+    
+            currentVideo = intent.getSerializableExtra("video") as? TvVideo
+            @Suppress("UNCHECKED_CAST")
+            playlist = intent.getSerializableExtra("playlist") as? ArrayList<TvVideo>
+            currentIndex = intent.getIntExtra("currentIndex", 0)
+    
+            if (currentVideo == null) {
+                Toast.makeText(this, "No video provided", Toast.LENGTH_SHORT).show()
+                finish()
+                return
+            }
+    
+            initializePlayer()
+        } catch (e: Exception) {
+            val errString = "Player Crash! Cause: ${e.javaClass.simpleName}: ${e.message}\n${e.stackTraceToString()}"
+            android.util.Log.e("PlayerActivity", errString)
+            Toast.makeText(this, errString.take(150), Toast.LENGTH_LONG).show()
+            Toast.makeText(this, errString.take(150), Toast.LENGTH_LONG).show() // show twice to last longer
             finish()
-            return
         }
 
-        initializePlayer()
     }
     
     private fun getVideoById(id: String): TvVideo? {
