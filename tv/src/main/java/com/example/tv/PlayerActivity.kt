@@ -315,7 +315,7 @@ class PlayerActivity : AppCompatActivity() {
                 } else {
                     btnPlayPause.setImageResource(R.drawable.ic_play_flat)
                     hideHandler.removeCallbacks(hideRunnable)
-                    overlay.visibility = View.VISIBLE
+                    showMetadataTemp()
                 }
             }
         })
@@ -426,9 +426,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun showMetadataTemp() {
         overlay.visibility = View.VISIBLE
-        if (overlay.findFocus() == null) {
-            btnPlayPause.requestFocus()
-        }
+        btnPlayPause.requestFocus()
         scheduleMetadataHide()
     }
 
