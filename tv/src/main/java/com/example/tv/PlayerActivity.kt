@@ -71,6 +71,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private val hideRunnable = Runnable {
         overlay.visibility = View.GONE
+        resetFocusMemory()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -416,6 +417,15 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
+            if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+                if (overlay.visibility == View.VISIBLE) {
+                    overlay.visibility = View.GONE
+                    resetFocusMemory()
+                    return true
+                } else {
+                    return super.dispatchKeyEvent(event)
+                }
+            }
             if (overlay.visibility != View.VISIBLE) {
                 val focusOnSeekBar = event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT || event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
                 showMetadataTemp(focusOnSeekBar)
@@ -479,6 +489,13 @@ class PlayerActivity : AppCompatActivity() {
             scheduleMetadataHide()
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    private fun resetFocusMemory() {
+        lastFocusedTopBarView = findViewById(R.id.btnCast)
+        lastFocusedMiddleRightView = findViewById(R.id.btnAudioTrack)
+        lastFocusedControlsPillView = btnPlayPause
+        lastFocusedUpperView = lastFocusedMiddleRightView
     }
 
     private fun setupFocusMemory() {
