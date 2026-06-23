@@ -75,6 +75,7 @@ class PlayerActivity : AppCompatActivity() {
             playerView = findViewById(R.id.internalVideoView)
             overlay = findViewById(R.id.playerControlsOverlay)
             titleText = findViewById(R.id.playerTitleText)
+            titleText.isSelected = true
             btnPlayPause = findViewById(R.id.playerPlayPauseBtn)
             timeBar = findViewById(R.id.playerSeekBar)
             txtCurrentTime = findViewById(R.id.playerCurrentTime)
