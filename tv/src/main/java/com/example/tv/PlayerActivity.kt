@@ -22,7 +22,7 @@ class PlayerActivity : FragmentActivity() {
     private var exoPlayer: ExoPlayer? = null
     private lateinit var overlay: View
     private lateinit var titleText: TextView
-    private lateinit var btnPlayPause: androidx.appcompat.widget.AppCompatImageButton
+    private lateinit var btnPlayPause: android.widget.ImageButton
     private lateinit var timeBar: DefaultTimeBar
     private lateinit var txtCurrentTime: TextView
     private lateinit var txtTotalTime: TextView

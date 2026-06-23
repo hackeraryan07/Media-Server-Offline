@@ -41,7 +41,7 @@
 			android:paddingTop="12dp"
 			android:paddingBottom="6dp">
 
-			<androidx.appcompat.widget.AppCompatImageButton
+			<ImageButton
 				android:id="@+id/playerBackBtn"
 				android:layout_width="40dp"
 				android:layout_height="40dp"
@@ -50,9 +50,9 @@
 				android:contentDescription="Back"
 				android:scaleType="fitCenter"
 				android:padding="8dp"
-				app:srcCompat="@drawable/ic_back"/>
+				android:src="@drawable/ic_back"/>
 
-			<androidx.appcompat.widget.AppCompatImageButton
+			<ImageButton
 				android:id="@+id/btnPlaylist"
 				android:layout_width="40dp"
 				android:layout_height="40dp"
@@ -61,7 +61,7 @@
 				android:contentDescription="Playlist"
 				android:scaleType="fitCenter"
 				android:padding="8dp"
-				app:srcCompat="@drawable/ic_video_queue"/>
+				android:src="@drawable/ic_video_queue"/>
 
 			<TextView
 				android:id="@+id/playerTitleText"
@@ -77,7 +77,7 @@
 				android:layout_marginLeft="4dp"
 				android:layout_marginRight="4dp"/>
 
-			<androidx.appcompat.widget.AppCompatImageButton
+			<ImageButton
 				android:id="@+id/btnCast"
 				android:layout_width="40dp"
 				android:layout_height="40dp"
@@ -86,9 +86,9 @@
 				android:contentDescription="Cast"
 				android:scaleType="fitCenter"
 				android:padding="8dp"
-				app:srcCompat="@drawable/cast_24px"/>
+				android:src="@drawable/cast_24px"/>
 
-			<androidx.appcompat.widget.AppCompatImageButton
+			<ImageButton
 				android:id="@+id/btnScreenshot"
 				android:layout_width="40dp"
 				android:layout_height="40dp"
@@ -97,9 +97,9 @@
 				android:contentDescription="Screenshot"
 				android:scaleType="fitCenter"
 				android:padding="8dp"
-				app:srcCompat="@drawable/photo_camera_24px"/>
+				android:src="@drawable/photo_camera_24px"/>
 
-			<androidx.appcompat.widget.AppCompatImageButton
+			<ImageButton
 				android:id="@+id/btnMute"
 				android:layout_width="40dp"
 				android:layout_height="40dp"
@@ -108,9 +108,9 @@
 				android:contentDescription="Mute"
 				android:scaleType="fitCenter"
 				android:padding="8dp"
-				app:srcCompat="@drawable/ic_vol_mute"/>
+				android:src="@drawable/ic_vol_mute"/>
 
-			<androidx.appcompat.widget.AppCompatImageButton
+			<ImageButton
 				android:id="@+id/btnRotate"
 				android:layout_width="40dp"
 				android:layout_height="40dp"
@@ -119,7 +119,7 @@
 				android:contentDescription="Rotate"
 				android:scaleType="fitCenter"
 				android:padding="8dp"
-				app:srcCompat="@drawable/ic_autorotate"/>
+				android:src="@drawable/ic_autorotate"/>
 
 		</LinearLayout>
 
@@ -134,7 +134,7 @@
 			android:paddingRight="8dp"
 			android:gravity="center_vertical">
 
-			<androidx.appcompat.widget.AppCompatImageButton
+			<ImageButton
 				android:id="@+id/btnAudioTrack"
 				android:layout_width="40dp"
 				android:layout_height="40dp"
@@ -143,9 +143,9 @@
 				android:contentDescription="Audio Track"
 				android:scaleType="fitCenter"
 				android:padding="8dp"
-				app:srcCompat="@drawable/ic_audio"/>
+				android:src="@drawable/ic_audio"/>
 
-			<androidx.appcompat.widget.AppCompatImageButton
+			<ImageButton
 				android:id="@+id/btnSubtitles"
 				android:layout_width="40dp"
 				android:layout_height="40dp"
@@ -154,9 +154,9 @@
 				android:contentDescription="Subtitles"
 				android:scaleType="fitCenter"
 				android:padding="8dp"
-				app:srcCompat="@drawable/ic_subtitle"/>
+				android:src="@drawable/ic_subtitle"/>
 
-			<androidx.appcompat.widget.AppCompatImageButton
+			<ImageButton
 				android:id="@+id/btnPip"
 				android:layout_width="40dp"
 				android:layout_height="40dp"
@@ -165,9 +165,9 @@
 				android:contentDescription="Aspect Ratio"
 				android:scaleType="fitCenter"
 				android:padding="8dp"
-				app:srcCompat="@drawable/ic_settings_pip"/>
+				android:src="@drawable/ic_settings_pip"/>
 
-			<androidx.appcompat.widget.AppCompatImageButton
+			<ImageButton
 				android:id="@+id/btnSpeed"
 				android:layout_width="40dp"
 				android:layout_height="40dp"
@@ -176,9 +176,9 @@
 				android:contentDescription="Speed"
 				android:scaleType="fitCenter"
 				android:padding="8dp"
-				app:srcCompat="@drawable/speed_24px"/>
+				android:src="@drawable/speed_24px"/>
 
-			<androidx.appcompat.widget.AppCompatImageButton
+			<ImageButton
 				android:id="@+id/btnSettings"
 				android:layout_width="40dp"
 				android:layout_height="40dp"
@@ -187,7 +187,7 @@
 				android:contentDescription="Settings"
 				android:scaleType="fitCenter"
 				android:padding="8dp"
-				app:srcCompat="@drawable/ic_play_options"/>
+				android:src="@drawable/ic_play_options"/>
 
 		</LinearLayout>
 
@@ -256,7 +256,7 @@
 				android:paddingRight="8dp"
 				android:elevation="8dp">
 
-				<androidx.appcompat.widget.AppCompatImageButton
+				<ImageButton
 					android:id="@+id/btnLock"
 					android:layout_width="44dp"
 					android:layout_height="44dp"
@@ -265,9 +265,9 @@
 					android:contentDescription="Lock"
 					android:scaleType="fitCenter"
 					android:padding="10dp"
-					app:srcCompat="@drawable/ic_screen_lock"/>
+					android:src="@drawable/ic_screen_lock"/>
 
-				<androidx.appcompat.widget.AppCompatImageButton
+				<ImageButton
 					android:id="@+id/btnReplay10"
 					android:layout_width="44dp"
 					android:layout_height="44dp"
@@ -276,9 +276,9 @@
 					android:contentDescription="Replay 10 seconds"
 					android:scaleType="fitCenter"
 					android:padding="10dp"
-					app:srcCompat="@drawable/ic_rewind_10"/>
+					android:src="@drawable/ic_rewind_10"/>
 
-				<androidx.appcompat.widget.AppCompatImageButton
+				<ImageButton
 					android:id="@+id/btnPrevious"
 					android:layout_width="44dp"
 					android:layout_height="44dp"
@@ -287,9 +287,9 @@
 					android:contentDescription="Previous"
 					android:scaleType="fitCenter"
 					android:padding="10dp"
-					app:srcCompat="@drawable/ic_fastrewind_flat"/>
+					android:src="@drawable/ic_fastrewind_flat"/>
 
-				<androidx.appcompat.widget.AppCompatImageButton
+				<ImageButton
 					android:id="@+id/playerPlayPauseBtn"
 					android:layout_width="52dp"
 					android:layout_height="52dp"
@@ -298,9 +298,9 @@
 					android:contentDescription="Play Pause"
 					android:scaleType="fitCenter"
 					android:padding="8dp"
-					app:srcCompat="@drawable/ic_pause_flat"/>
+					android:src="@drawable/ic_pause_flat"/>
 
-				<androidx.appcompat.widget.AppCompatImageButton
+				<ImageButton
 					android:id="@+id/btnNext"
 					android:layout_width="44dp"
 					android:layout_height="44dp"
@@ -309,9 +309,9 @@
 					android:contentDescription="Next"
 					android:scaleType="fitCenter"
 					android:padding="10dp"
-					app:srcCompat="@drawable/ic_fastforward_flat"/>
+					android:src="@drawable/ic_fastforward_flat"/>
 
-				<androidx.appcompat.widget.AppCompatImageButton
+				<ImageButton
 					android:id="@+id/btnForward10"
 					android:layout_width="44dp"
 					android:layout_height="44dp"
@@ -320,9 +320,9 @@
 					android:contentDescription="Forward 10 seconds"
 					android:scaleType="fitCenter"
 					android:padding="10dp"
-					app:srcCompat="@drawable/ic_forward_10"/>
+					android:src="@drawable/ic_forward_10"/>
 
-				<androidx.appcompat.widget.AppCompatImageButton
+				<ImageButton
 					android:id="@+id/btnResize"
 					android:layout_width="44dp"
 					android:layout_height="44dp"
@@ -331,7 +331,7 @@
 					android:contentDescription="Resize"
 					android:scaleType="fitCenter"
 					android:padding="10dp"
-					app:srcCompat="@drawable/ic_screen_fit"/>
+					android:src="@drawable/ic_screen_fit"/>
 
 			</LinearLayout>
 
