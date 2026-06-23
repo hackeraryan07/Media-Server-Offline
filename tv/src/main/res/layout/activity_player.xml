@@ -298,7 +298,6 @@
 					android:contentDescription="Play Pause"
 					android:scaleType="fitCenter"
 					android:padding="8dp"
-					android:focusedByDefault="true"
 					android:src="@drawable/ic_pause_flat"/>
 
 				<ImageButton

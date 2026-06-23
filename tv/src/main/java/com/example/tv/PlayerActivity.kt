@@ -27,6 +27,11 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var txtCurrentTime: TextView
     private lateinit var txtTotalTime: TextView
     private lateinit var loadingSpinner: android.widget.ProgressBar
+
+    private var lastFocusedTopBarView: View? = null
+    private var lastFocusedMiddleRightView: View? = null
+    private var lastFocusedControlsPillView: View? = null
+    private var lastFocusedUpperView: View? = null
     
     private val hideHandler = Handler(Looper.getMainLooper())
     private var videoUrlString: String? = null
@@ -134,6 +139,7 @@ class PlayerActivity : AppCompatActivity() {
             }
     
             initializePlayer()
+            setupFocusMemory()
         } catch (e: Exception) {
             val errString = "Player Crash! Cause: ${e.javaClass.simpleName}: ${e.message}\n${e.stackTraceToString()}"
             android.util.Log.e("PlayerActivity", errString)
@@ -414,7 +420,55 @@ class PlayerActivity : AppCompatActivity() {
                 showMetadataTemp(focusOnSeekBar)
                 return true
             }
-            if ((event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER) && currentFocus == timeBar) {
+
+            val currentFocusView = currentFocus
+            val topBar = findViewById<android.view.ViewGroup>(R.id.topBar)
+            val middleRightBar = findViewById<android.view.ViewGroup>(R.id.middleRightBar)
+            val controlsPillContainer = btnPlayPause.parent as? android.view.ViewGroup
+
+            if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                if (currentFocusView == timeBar) {
+                    val target = lastFocusedControlsPillView ?: btnPlayPause
+                    if (target.visibility == View.VISIBLE && target.isFocusable) {
+                        target.requestFocus()
+                        scheduleMetadataHide()
+                        return true
+                    }
+                } else if (currentFocusView != null && currentFocusView.parent == middleRightBar) {
+                    timeBar.requestFocus()
+                    scheduleMetadataHide()
+                    return true
+                } else if (currentFocusView != null && currentFocusView.parent == topBar) {
+                    val target = lastFocusedMiddleRightView
+                    if (target != null && target.visibility == View.VISIBLE && target.isFocusable) {
+                        target.requestFocus()
+                    } else {
+                        timeBar.requestFocus()
+                    }
+                    scheduleMetadataHide()
+                    return true
+                }
+            } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                if (currentFocusView != null && currentFocusView.parent == controlsPillContainer) {
+                    timeBar.requestFocus()
+                    scheduleMetadataHide()
+                    return true
+                } else if (currentFocusView == timeBar) {
+                    val target = lastFocusedUpperView ?: lastFocusedMiddleRightView ?: lastFocusedTopBarView
+                    if (target != null && target.visibility == View.VISIBLE && target.isFocusable) {
+                        target.requestFocus()
+                        scheduleMetadataHide()
+                        return true
+                    }
+                } else if (currentFocusView != null && currentFocusView.parent == middleRightBar) {
+                    val target = lastFocusedTopBarView
+                    if (target != null && target.visibility == View.VISIBLE && target.isFocusable) {
+                        target.requestFocus()
+                        scheduleMetadataHide()
+                        return true
+                    }
+                }
+            } else if ((event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER) && currentFocusView == timeBar) {
                 exoPlayer?.let {
                     if (it.isPlaying) it.pause() else it.play()
                 }
@@ -426,6 +480,56 @@ class PlayerActivity : AppCompatActivity() {
         return super.dispatchKeyEvent(event)
     }
 
+    private fun setupFocusMemory() {
+        val topBar = findViewById<android.view.ViewGroup>(R.id.topBar)
+        val middleRightBar = findViewById<android.view.ViewGroup>(R.id.middleRightBar)
+        val controlsPillContainer = btnPlayPause.parent as? android.view.ViewGroup
+
+        // Default initial focus values
+        lastFocusedTopBarView = findViewById(R.id.playerBackBtn)
+        lastFocusedMiddleRightView = findViewById(R.id.btnAudioTrack)
+        lastFocusedControlsPillView = btnPlayPause
+        lastFocusedUpperView = lastFocusedMiddleRightView ?: lastFocusedTopBarView
+
+        // Top Bar focus tracking
+        topBar?.let { group ->
+            for (i in 0 until group.childCount) {
+                val child = group.getChildAt(i)
+                child.onFocusChangeListener = View.OnFocusChangeListener { v, hasFocus ->
+                    if (hasFocus) {
+                        lastFocusedTopBarView = v
+                        lastFocusedUpperView = v
+                    }
+                }
+            }
+        }
+
+        // Middle Right Bar focus tracking
+        middleRightBar?.let { group ->
+            for (i in 0 until group.childCount) {
+                val child = group.getChildAt(i)
+                child.onFocusChangeListener = View.OnFocusChangeListener { v, hasFocus ->
+                    if (hasFocus) {
+                        lastFocusedMiddleRightView = v
+                        lastFocusedUpperView = v
+                    }
+                }
+            }
+        }
+
+        // Controls Pill focus tracking
+        controlsPillContainer?.let { group ->
+            for (i in 0 until group.childCount) {
+                val child = group.getChildAt(i)
+                child.onFocusChangeListener = View.OnFocusChangeListener { v, hasFocus ->
+                    if (hasFocus) {
+                        lastFocusedControlsPillView = v
+                    }
+                }
+            }
+        }
+    }
+
     private fun showMetadataTemp(focusOnSeekBar: Boolean = false) {
         val wasHidden = overlay.visibility != View.VISIBLE
         overlay.visibility = View.VISIBLE
@@ -433,7 +537,7 @@ class PlayerActivity : AppCompatActivity() {
             if (focusOnSeekBar) {
                 timeBar.requestFocus()
             } else {
-                btnPlayPause.requestFocus()
+                (lastFocusedControlsPillView ?: btnPlayPause).requestFocus()
             }
         }
         scheduleMetadataHide()
