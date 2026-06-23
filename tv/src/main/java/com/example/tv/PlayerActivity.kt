@@ -32,6 +32,7 @@ class PlayerActivity : AppCompatActivity() {
     private var lastFocusedMiddleRightView: View? = null
     private var lastFocusedControlsPillView: View? = null
     private var lastFocusedUpperView: View? = null
+    private var ignoreFocusMemory = false
     
     private val hideHandler = Handler(Looper.getMainLooper())
     private var videoUrlString: String? = null
@@ -486,17 +487,17 @@ class PlayerActivity : AppCompatActivity() {
         val controlsPillContainer = btnPlayPause.parent as? android.view.ViewGroup
 
         // Default initial focus values
-        lastFocusedTopBarView = findViewById(R.id.playerBackBtn)
+        lastFocusedTopBarView = findViewById(R.id.btnCast)
         lastFocusedMiddleRightView = findViewById(R.id.btnAudioTrack)
         lastFocusedControlsPillView = btnPlayPause
-        lastFocusedUpperView = lastFocusedMiddleRightView ?: lastFocusedTopBarView
+        lastFocusedUpperView = lastFocusedMiddleRightView
 
         // Top Bar focus tracking
         topBar?.let { group ->
             for (i in 0 until group.childCount) {
                 val child = group.getChildAt(i)
                 child.onFocusChangeListener = View.OnFocusChangeListener { v, hasFocus ->
-                    if (hasFocus) {
+                    if (hasFocus && !ignoreFocusMemory && overlay.visibility == View.VISIBLE) {
                         lastFocusedTopBarView = v
                         lastFocusedUpperView = v
                     }
@@ -509,7 +510,7 @@ class PlayerActivity : AppCompatActivity() {
             for (i in 0 until group.childCount) {
                 val child = group.getChildAt(i)
                 child.onFocusChangeListener = View.OnFocusChangeListener { v, hasFocus ->
-                    if (hasFocus) {
+                    if (hasFocus && !ignoreFocusMemory && overlay.visibility == View.VISIBLE) {
                         lastFocusedMiddleRightView = v
                         lastFocusedUpperView = v
                     }
@@ -522,7 +523,7 @@ class PlayerActivity : AppCompatActivity() {
             for (i in 0 until group.childCount) {
                 val child = group.getChildAt(i)
                 child.onFocusChangeListener = View.OnFocusChangeListener { v, hasFocus ->
-                    if (hasFocus) {
+                    if (hasFocus && !ignoreFocusMemory && overlay.visibility == View.VISIBLE) {
                         lastFocusedControlsPillView = v
                     }
                 }
@@ -532,13 +533,19 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun showMetadataTemp(focusOnSeekBar: Boolean = false) {
         val wasHidden = overlay.visibility != View.VISIBLE
-        overlay.visibility = View.VISIBLE
         if (wasHidden) {
+            ignoreFocusMemory = true
+            overlay.visibility = View.VISIBLE
             if (focusOnSeekBar) {
                 timeBar.requestFocus()
             } else {
                 (lastFocusedControlsPillView ?: btnPlayPause).requestFocus()
             }
+            overlay.post {
+                ignoreFocusMemory = false
+            }
+        } else {
+            overlay.visibility = View.VISIBLE
         }
         scheduleMetadataHide()
     }
