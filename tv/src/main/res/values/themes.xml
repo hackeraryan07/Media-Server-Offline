@@ -8,7 +8,7 @@
         <item name="searchOrbColor">@color/accent_color</item>
     </style>
 
-    <style name="Theme.TvApp.Player" parent="android:Theme.DeviceDefault.NoActionBar">
+    <style name="Theme.TvApp.Player" parent="Theme.Leanback">
         <item name="android:windowBackground">#000000</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowFullscreen">true</item>

@@ -254,24 +254,27 @@ class TvPlaybackVideoFragment : VideoSupportFragment() {
     }
 
     private fun showResumeDialog(video: TvVideo) {
-        if (resumeDialog?.isShowing == true) {
-            resumeDialog?.dismiss()
+        Handler(Looper.getMainLooper()).post {
+            if (resumeDialog?.isShowing == true) {
+                resumeDialog?.dismiss()
+            }
+            if (activity == null || activity?.isFinishing == true) return@post
+            isWaitingForResume = true
+            val builder = android.app.AlertDialog.Builder(requireActivity(), android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            builder.setTitle("Resume Playback?")
+            builder.setMessage("Would you like to resume \"${video.title}\" from ${formatTime(video.watchedPosition)}?")
+            builder.setPositiveButton("Continue") { dialog, _ ->
+                handleResumeChoice("continue", video.watchedPosition)
+                dialog.dismiss()
+            }
+            builder.setNegativeButton("Start Over") { dialog, _ ->
+                handleResumeChoice("start_over", 0L)
+                dialog.dismiss()
+            }
+            builder.setCancelable(false)
+            resumeDialog = builder.create()
+            resumeDialog?.show()
         }
-        isWaitingForResume = true
-        val builder = android.app.AlertDialog.Builder(requireContext(), android.R.style.Theme_DeviceDefault_Dialog_Alert)
-        builder.setTitle("Resume Playback?")
-        builder.setMessage("Would you like to resume \"${video.title}\" from ${formatTime(video.watchedPosition)}?")
-        builder.setPositiveButton("Continue") { dialog, _ ->
-            handleResumeChoice("continue", video.watchedPosition)
-            dialog.dismiss()
-        }
-        builder.setNegativeButton("Start Over") { dialog, _ ->
-            handleResumeChoice("start_over", 0L)
-            dialog.dismiss()
-        }
-        builder.setCancelable(false)
-        resumeDialog = builder.create()
-        resumeDialog?.show()
     }
 
     private fun sendProgressUpdate(videoId: String, position: Long, duration: Long) {
@@ -307,8 +310,8 @@ class TvPlaybackVideoFragment : VideoSupportFragment() {
         }
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
+    override fun onDestroy() {
+        super.onDestroy()
         TvRemoteServer.playerController = null
         progressHandler.removeCallbacks(progressRunnable)
         saveFinalProgress()
