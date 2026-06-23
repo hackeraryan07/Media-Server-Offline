@@ -1,13 +1,342 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#000000">
+<RelativeLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="#000000">
 
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/video_fragment"
-        android:name="com.example.tv.TvPlaybackVideoFragment"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+	<androidx.media3.ui.PlayerView
+		android:id="@+id/internalVideoView"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:layout_centerInParent="true"
+        app:use_controller="false" />
 
-</FrameLayout>
+	<TextView
+		android:id="@+id/playerLoadingText"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="Loading..."
+		android:textSize="16sp"
+		android:textColor="#ffffff"
+		android:layout_centerInParent="true"
+		android:visibility="visible"/>
+
+	<RelativeLayout
+		android:id="@+id/playerControlsOverlay"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:visibility="gone">
+
+		<LinearLayout
+			android:id="@+id/topBar"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_alignParentTop="true"
+			android:orientation="horizontal"
+			android:gravity="center_vertical"
+			android:paddingLeft="4dp"
+			android:paddingRight="8dp"
+			android:paddingTop="12dp"
+			android:paddingBottom="6dp">
+
+			<androidx.appcompat.widget.AppCompatImageButton
+				android:id="@+id/playerBackBtn"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:background="@drawable/btn_borderless"
+				android:tint="#ffffff"
+				android:contentDescription="Back"
+				android:scaleType="fitCenter"
+				android:padding="8dp"
+				app:srcCompat="@drawable/ic_back"/>
+
+			<androidx.appcompat.widget.AppCompatImageButton
+				android:id="@+id/btnPlaylist"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:background="@drawable/btn_borderless"
+				android:tint="#ffffff"
+				android:contentDescription="Playlist"
+				android:scaleType="fitCenter"
+				android:padding="8dp"
+				app:srcCompat="@drawable/ic_video_queue"/>
+
+			<TextView
+				android:id="@+id/playerTitleText"
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:text="Playing..."
+				android:textSize="14sp"
+				android:textColor="#ffffff"
+				android:gravity="center"
+				android:ellipsize="end"
+				android:singleLine="true"
+				android:layout_marginLeft="4dp"
+				android:layout_marginRight="4dp"/>
+
+			<androidx.appcompat.widget.AppCompatImageButton
+				android:id="@+id/btnCast"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:background="@drawable/btn_borderless"
+				android:tint="#ffffff"
+				android:contentDescription="Cast"
+				android:scaleType="fitCenter"
+				android:padding="8dp"
+				app:srcCompat="@drawable/cast_24px"/>
+
+			<androidx.appcompat.widget.AppCompatImageButton
+				android:id="@+id/btnScreenshot"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:background="@drawable/btn_borderless"
+				android:tint="#ffffff"
+				android:contentDescription="Screenshot"
+				android:scaleType="fitCenter"
+				android:padding="8dp"
+				app:srcCompat="@drawable/photo_camera_24px"/>
+
+			<androidx.appcompat.widget.AppCompatImageButton
+				android:id="@+id/btnMute"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:background="@drawable/btn_borderless"
+				android:tint="#ffffff"
+				android:contentDescription="Mute"
+				android:scaleType="fitCenter"
+				android:padding="8dp"
+				app:srcCompat="@drawable/ic_vol_mute"/>
+
+			<androidx.appcompat.widget.AppCompatImageButton
+				android:id="@+id/btnRotate"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:background="@drawable/btn_borderless"
+				android:tint="#ffffff"
+				android:contentDescription="Rotate"
+				android:scaleType="fitCenter"
+				android:padding="8dp"
+				app:srcCompat="@drawable/ic_autorotate"/>
+
+		</LinearLayout>
+
+		<LinearLayout
+			android:id="@+id/middleRightBar"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_alignParentRight="true"
+			android:layout_above="@+id/bottomSection"
+			android:layout_marginBottom="8dp"
+			android:orientation="horizontal"
+			android:paddingRight="8dp"
+			android:gravity="center_vertical">
+
+			<androidx.appcompat.widget.AppCompatImageButton
+				android:id="@+id/btnAudioTrack"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:background="@drawable/btn_borderless"
+				android:tint="#ffffff"
+				android:contentDescription="Audio Track"
+				android:scaleType="fitCenter"
+				android:padding="8dp"
+				app:srcCompat="@drawable/ic_audio"/>
+
+			<androidx.appcompat.widget.AppCompatImageButton
+				android:id="@+id/btnSubtitles"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:background="@drawable/btn_borderless"
+				android:tint="#ffffff"
+				android:contentDescription="Subtitles"
+				android:scaleType="fitCenter"
+				android:padding="8dp"
+				app:srcCompat="@drawable/ic_subtitle"/>
+
+			<androidx.appcompat.widget.AppCompatImageButton
+				android:id="@+id/btnPip"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:background="@drawable/btn_borderless"
+				android:tint="#ffffff"
+				android:contentDescription="Aspect Ratio"
+				android:scaleType="fitCenter"
+				android:padding="8dp"
+				app:srcCompat="@drawable/ic_settings_pip"/>
+
+			<androidx.appcompat.widget.AppCompatImageButton
+				android:id="@+id/btnSpeed"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:background="@drawable/btn_borderless"
+				android:tint="#ffffff"
+				android:contentDescription="Speed"
+				android:scaleType="fitCenter"
+				android:padding="8dp"
+				app:srcCompat="@drawable/speed_24px"/>
+
+			<androidx.appcompat.widget.AppCompatImageButton
+				android:id="@+id/btnSettings"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:background="@drawable/btn_borderless"
+				android:tint="#ffffff"
+				android:contentDescription="Settings"
+				android:scaleType="fitCenter"
+				android:padding="8dp"
+				app:srcCompat="@drawable/ic_play_options"/>
+
+		</LinearLayout>
+
+		<LinearLayout
+			android:id="@+id/bottomSection"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_alignParentBottom="true"
+			android:orientation="vertical"
+			android:paddingLeft="8dp"
+			android:paddingRight="8dp"
+			android:paddingBottom="12dp"
+			android:paddingTop="4dp">
+
+			<androidx.media3.ui.DefaultTimeBar
+				android:id="@+id/playerSeekBar"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginLeft="8dp"
+				android:layout_marginRight="8dp"
+				android:layout_marginBottom="2dp"
+				android:paddingLeft="0dp"
+				android:paddingRight="0dp" />
+
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="horizontal"
+				android:paddingLeft="8dp"
+				android:paddingRight="8dp"
+				android:layout_marginBottom="10dp">
+
+				<TextView
+					android:id="@+id/playerCurrentTime"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:text="0:00"
+					android:textSize="12sp"
+					android:textColor="#cccccc"
+					android:layout_marginLeft="10dp"/>
+
+				<View
+					android:layout_width="0dp"
+					android:layout_height="1dp"
+					android:layout_weight="1"/>
+
+				<TextView
+					android:id="@+id/playerTotalTime"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:text="0:00"
+					android:textSize="12sp"
+					android:textColor="#888888"
+					android:layout_marginRight="10dp"/>
+
+			</LinearLayout>
+
+			<LinearLayout
+				android:layout_width="wrap_content"
+				android:layout_height="52dp"
+				android:layout_gravity="center_horizontal"
+				android:orientation="horizontal"
+				android:gravity="center_vertical"
+				android:background="@drawable/player_controls_pill_bg"
+				android:paddingLeft="8dp"
+				android:paddingRight="8dp"
+				android:elevation="8dp">
+
+				<androidx.appcompat.widget.AppCompatImageButton
+					android:id="@+id/btnLock"
+					android:layout_width="44dp"
+					android:layout_height="44dp"
+					android:background="@drawable/btn_borderless"
+					android:tint="#ffffff"
+					android:contentDescription="Lock"
+					android:scaleType="fitCenter"
+					android:padding="10dp"
+					app:srcCompat="@drawable/ic_screen_lock"/>
+
+				<androidx.appcompat.widget.AppCompatImageButton
+					android:id="@+id/btnReplay10"
+					android:layout_width="44dp"
+					android:layout_height="44dp"
+					android:background="@drawable/btn_borderless"
+					android:tint="#ffffff"
+					android:contentDescription="Replay 10 seconds"
+					android:scaleType="fitCenter"
+					android:padding="10dp"
+					app:srcCompat="@drawable/ic_rewind_10"/>
+
+				<androidx.appcompat.widget.AppCompatImageButton
+					android:id="@+id/btnPrevious"
+					android:layout_width="44dp"
+					android:layout_height="44dp"
+					android:background="@drawable/btn_borderless"
+					android:tint="#ffffff"
+					android:contentDescription="Previous"
+					android:scaleType="fitCenter"
+					android:padding="10dp"
+					app:srcCompat="@drawable/ic_fastrewind_flat"/>
+
+				<androidx.appcompat.widget.AppCompatImageButton
+					android:id="@+id/playerPlayPauseBtn"
+					android:layout_width="52dp"
+					android:layout_height="52dp"
+					android:background="@drawable/btn_borderless"
+					android:tint="#ffffff"
+					android:contentDescription="Play Pause"
+					android:scaleType="fitCenter"
+					android:padding="8dp"
+					app:srcCompat="@drawable/ic_pause_flat"/>
+
+				<androidx.appcompat.widget.AppCompatImageButton
+					android:id="@+id/btnNext"
+					android:layout_width="44dp"
+					android:layout_height="44dp"
+					android:background="@drawable/btn_borderless"
+					android:tint="#ffffff"
+					android:contentDescription="Next"
+					android:scaleType="fitCenter"
+					android:padding="10dp"
+					app:srcCompat="@drawable/ic_fastforward_flat"/>
+
+				<androidx.appcompat.widget.AppCompatImageButton
+					android:id="@+id/btnForward10"
+					android:layout_width="44dp"
+					android:layout_height="44dp"
+					android:background="@drawable/btn_borderless"
+					android:tint="#ffffff"
+					android:contentDescription="Forward 10 seconds"
+					android:scaleType="fitCenter"
+					android:padding="10dp"
+					app:srcCompat="@drawable/ic_forward_10"/>
+
+				<androidx.appcompat.widget.AppCompatImageButton
+					android:id="@+id/btnResize"
+					android:layout_width="44dp"
+					android:layout_height="44dp"
+					android:background="@drawable/btn_borderless"
+					android:tint="#ffffff"
+					android:contentDescription="Resize"
+					android:scaleType="fitCenter"
+					android:padding="10dp"
+					app:srcCompat="@drawable/ic_screen_fit"/>
+
+			</LinearLayout>
+
+		</LinearLayout>
+
+	</RelativeLayout>
+
+</RelativeLayout>
