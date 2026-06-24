@@ -41,6 +41,38 @@ class PlayerActivity : AppCompatActivity() {
     private var playlist: List<TvVideo>? = null
     private var currentIndex: Int = 0
     private var currentVideo: TvVideo? = null
+    private var isLocked = false
+
+    private fun updateLockState() {
+        val btnLock = findViewById<android.widget.ImageButton>(R.id.btnLock)
+        val lockColor = if (isLocked) android.graphics.Color.RED else android.graphics.Color.WHITE
+        btnLock.setColorFilter(lockColor, android.graphics.PorterDuff.Mode.SRC_IN)
+        
+        val alphaVal = if (isLocked) 0.5f else 1.0f
+        
+        val allControls = listOf(
+            R.id.playerBackBtn, R.id.btnPlaylist, R.id.btnCast, R.id.btnScreenshot,
+            R.id.btnMute, R.id.btnRotate, R.id.btnAudioTrack, R.id.btnSubtitles,
+            R.id.btnPip, R.id.btnSpeed, R.id.btnSettings,
+            R.id.btnReplay10, R.id.btnPrevious, R.id.playerPlayPauseBtn,
+            R.id.btnNext, R.id.btnForward10, R.id.btnResize,
+            R.id.playerTitleText, R.id.playerCurrentTime, R.id.playerTotalTime
+        )
+        
+        for (id in allControls) {
+            findViewById<View>(id)?.let { view ->
+                view.alpha = alphaVal
+                view.isFocusable = !isLocked
+                view.isClickable = !isLocked
+            }
+        }
+        
+        timeBar.isFocusable = !isLocked
+        
+        if (isLocked) {
+            btnLock.requestFocus()
+        }
+    }
 
     private val progressRunnable = object : Runnable {
         override fun run() {
@@ -210,7 +242,9 @@ class PlayerActivity : AppCompatActivity() {
                 scheduleMetadataHide()
             }
             findViewById<View>(R.id.btnLock).setOnClickListener {
-                Toast.makeText(this, "Controls Locked", Toast.LENGTH_SHORT).show()
+                isLocked = !isLocked
+                updateLockState()
+                Toast.makeText(this, if (isLocked) "Controls Locked" else "Controls Unlocked", Toast.LENGTH_SHORT).show()
                 scheduleMetadataHide()
             }
             findViewById<View>(R.id.btnSettings).setOnClickListener {
@@ -314,6 +348,8 @@ class PlayerActivity : AppCompatActivity() {
                 var duration = 0L
                 var needsResume = false
                 var resumePos = 0L
+                var locked = false
+                var muted = false
                 val latch = java.util.concurrent.CountDownLatch(1)
                 Handler(Looper.getMainLooper()).post {
                     playing = exoPlayer?.isPlaying ?: false
@@ -321,6 +357,8 @@ class PlayerActivity : AppCompatActivity() {
                     duration = exoPlayer?.duration ?: 0L
                     needsResume = isWaitingForResume
                     resumePos = currentVideo?.watchedPosition ?: 0L
+                    locked = isLocked
+                    muted = exoPlayer?.volume == 0f
                     latch.countDown()
                 }
                 try { latch.await(1, java.util.concurrent.TimeUnit.SECONDS) } catch (e: Exception) {}
@@ -329,6 +367,8 @@ class PlayerActivity : AppCompatActivity() {
                 state.put("duration", duration)
                 state.put("needsResumeChoice", needsResume)
                 state.put("resumePosition", resumePos)
+                state.put("isLocked", locked)
+                state.put("isMuted", muted)
                 return state
             }
             override fun handleResumeChoice(choice: String) {
@@ -357,7 +397,7 @@ class PlayerActivity : AppCompatActivity() {
                             "forward_10" -> findViewById<View>(R.id.btnForward10)
                             else -> null
                         }
-                        view?.performClick()
+                        view?.callOnClick()
                     } catch (e: Exception) {
                         android.util.Log.e("PlayerActivity", "triggerAction failed for $action", e)
                     }
@@ -533,6 +573,34 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
+            if (isLocked) {
+                if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+                    if (overlay.visibility == View.VISIBLE) {
+                        overlay.visibility = View.GONE
+                        return true
+                    } else {
+                        showMetadataTemp(false)
+                        return true // Prevent closing player when locked
+                    }
+                }
+                if (overlay.visibility != View.VISIBLE) {
+                    showMetadataTemp(false)
+                    return true
+                }
+                
+                // Allow clicking btnLock to unlock
+                if (event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER) {
+                    if (currentFocus?.id == R.id.btnLock) {
+                        scheduleMetadataHide()
+                        return super.dispatchKeyEvent(event)
+                    }
+                }
+                
+                // Prevent all other navigation
+                scheduleMetadataHide()
+                return true
+            }
+
             if (event.keyCode == KeyEvent.KEYCODE_BACK) {
                 if (overlay.visibility == View.VISIBLE) {
                     overlay.visibility = View.GONE
@@ -669,7 +737,9 @@ class PlayerActivity : AppCompatActivity() {
         if (wasHidden) {
             ignoreFocusMemory = true
             overlay.visibility = View.VISIBLE
-            if (focusOnSeekBar) {
+            if (isLocked) {
+                findViewById<View>(R.id.btnLock)?.requestFocus()
+            } else if (focusOnSeekBar) {
                 timeBar.requestFocus()
             } else {
                 (lastFocusedControlsPillView ?: btnPlayPause).requestFocus()

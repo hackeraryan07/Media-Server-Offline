@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.alpha
 import com.example.server.ServerManager
 import com.example.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.Dispatchers
@@ -66,10 +67,12 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
     var needsResumeChoice by remember { mutableStateOf(false) }
     var resumePosition by remember { mutableStateOf(0L) }
     var showBottomSheet by remember { mutableStateOf(false) }
+    var isLocked by remember { mutableStateOf(false) }
+    var isMuted by remember { mutableStateOf(false) }
 
-    val options = remember {
+    val options = remember(isMuted, isLocked) {
         listOf(
-            OptionItem("Mute / Unmute", Icons.Default.VolumeOff, "mute", "Toggle audio volume"),
+            OptionItem(if (isMuted) "Unmute" else "Mute", if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp, "mute", "Toggle audio volume"),
             OptionItem("Audio Track", Icons.Default.Audiotrack, "audio_track", "Switch audio track"),
             OptionItem("Subtitles", Icons.Default.Subtitles, "subtitles", "Toggle subtitles"),
             OptionItem("Playback Speed", Icons.Default.Speed, "speed", "Change video speed"),
@@ -79,7 +82,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
             OptionItem("Playlist", Icons.Default.PlaylistPlay, "playlist", "Open playlist overview"),
             OptionItem("Cast Scan", Icons.Default.Cast, "cast", "Scan and connect to devices"),
             OptionItem("Screenshot", Icons.Default.PhotoCamera, "screenshot", "Capture TV screen"),
-            OptionItem("Lock Controls", Icons.Default.Lock, "lock", "Lock video player overlays"),
+            OptionItem(if (isLocked) "Unlock Controls" else "Lock Controls", if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen, "lock", "Lock video player overlays"),
             OptionItem("System Settings", Icons.Default.Settings, "settings", "Open settings panel"),
             OptionItem("TV Back Press", Icons.AutoMirrored.Filled.ArrowBack, "back", "Go back on TV")
         )
@@ -106,6 +109,8 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                                 duration = json.optLong("duration", 0L)
                                 needsResumeChoice = json.optBoolean("needsResumeChoice", false)
                                 resumePosition = json.optLong("resumePosition", 0L)
+                                isLocked = json.optBoolean("isLocked", false)
+                                isMuted = json.optBoolean("isMuted", false)
                                 if (!isSeeking) {
                                     position = json.optLong("position", 0L)
                                 }
@@ -310,6 +315,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                             isSeeking = false
                             sendCommand("seek&position=$position")
                         },
+                        enabled = !isLocked,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp),
@@ -323,12 +329,14 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
 
                     // Player Controls
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .alpha(if (isLocked) 0.5f else 1f),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(
-                            onClick = { sendCommand("prev") },
+                            onClick = { if (!isLocked) sendCommand("prev") },
                             modifier = Modifier
                                 .size(48.dp)
                                 .background(Color.White, CircleShape)
@@ -337,7 +345,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                         }
 
                         IconButton(
-                            onClick = { sendCommand("seek&position=${maxOf(0, position - 5000)}") },
+                            onClick = { if (!isLocked) sendCommand("seek&position=${maxOf(0, position - 5000)}") },
                             modifier = Modifier
                                 .size(48.dp)
                                 .background(Color.White, CircleShape)
@@ -346,7 +354,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                         }
 
                         IconButton(
-                            onClick = { sendCommand(if (isPlaying) "pause" else "play") },
+                            onClick = { if (!isLocked) sendCommand(if (isPlaying) "pause" else "play") },
                             modifier = Modifier
                                 .size(64.dp)
                                 .background(Color(0xFF6750A4), CircleShape)
@@ -360,7 +368,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                         }
 
                         IconButton(
-                            onClick = { sendCommand("seek&position=${minOf(duration, position + 10000)}") },
+                            onClick = { if (!isLocked) sendCommand("seek&position=${minOf(duration, position + 10000)}") },
                             modifier = Modifier
                                 .size(48.dp)
                                 .background(Color.White, CircleShape)
@@ -369,7 +377,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                         }
 
                         IconButton(
-                            onClick = { sendCommand("next") },
+                            onClick = { if (!isLocked) sendCommand("next") },
                             modifier = Modifier
                                 .size(48.dp)
                                 .background(Color.White, CircleShape)
@@ -380,26 +388,54 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    Button(
-                        onClick = { showBottomSheet = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6750A4)),
-                        shape = RoundedCornerShape(12.dp),
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More Options",
-                            tint = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "More Options",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = Color.White
-                        )
+                        Button(
+                            onClick = { sendCommand("lock") },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isLocked) Color(0xFFB3261E) else Color(0xFFEADDFF),
+                                contentColor = if (isLocked) Color.White else Color(0xFF21005D)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                                contentDescription = "Lock"
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isLocked) "Unlock" else "Lock",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                        }
+
+                        Button(
+                            onClick = { if (!isLocked) showBottomSheet = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6750A4)),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .alpha(if (isLocked) 0.5f else 1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "More Options",
+                                tint = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "More",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }
@@ -414,16 +450,19 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
 
             // Video List
             LazyColumn(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .alpha(if (isLocked) 0.5f else 1f),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                userScrollEnabled = !isLocked
             ) {
                 items(videoList) { video ->
                     val isCurrent = video.id == currentVideoId
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { sendCommand("play_video", video.id) },
+                            .clickable { if (!isLocked) sendCommand("play_video", video.id) },
                         colors = CardDefaults.cardColors(containerColor = if (isCurrent) Color(0xFFD3E3FD) else Color.White),
                         border = if (isCurrent) null else androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCAC4D0)),
                         shape = RoundedCornerShape(16.dp)
