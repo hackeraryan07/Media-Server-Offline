@@ -6,13 +6,14 @@ import android.os.Handler
 import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
+import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import androidx.media3.ui.DefaultTimeBar
+
 import org.json.JSONObject
 import android.widget.Toast
 
@@ -23,7 +24,7 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var overlay: View
     private lateinit var titleText: TextView
     private lateinit var btnPlayPause: android.widget.ImageButton
-    private lateinit var timeBar: DefaultTimeBar
+    private lateinit var timeBar: com.example.tv.TvTimeBar
     private lateinit var txtCurrentTime: TextView
     private lateinit var txtTotalTime: TextView
     private lateinit var loadingSpinner: android.widget.ProgressBar
@@ -93,8 +94,8 @@ class PlayerActivity : AppCompatActivity() {
                 val pos = player.currentPosition
                 val dur = player.duration
                 if (dur > 0) {
-                    timeBar.setPosition(pos)
-                    timeBar.setDuration(dur)
+                    timeBar.duration = dur
+                    timeBar.position = pos
                     txtCurrentTime.text = formatTime(pos)
                     txtTotalTime.text = formatTime(dur)
                 }
@@ -123,21 +124,22 @@ class PlayerActivity : AppCompatActivity() {
             txtTotalTime = findViewById(R.id.playerTotalTime)
             loadingSpinner = findViewById(R.id.playerLoadingSpinner)
     
-            timeBar.addListener(object : androidx.media3.ui.TimeBar.OnScrubListener {
-                override fun onScrubStart(timeBar: androidx.media3.ui.TimeBar, position: Long) {
+            timeBar.listener = object : com.example.tv.TvTimeBar.OnScrubListener {
+                override fun onScrubStart() {
                     exoPlayer?.pause()
                     scheduleMetadataHide()
                 }
-                override fun onScrubMove(timeBar: androidx.media3.ui.TimeBar, position: Long) {
+                override fun onScrubMove(position: Long) {
                     txtCurrentTime.text = formatTime(position)
+                    exoPlayer?.seekTo(position)
                     scheduleMetadataHide()
                 }
-                override fun onScrubStop(timeBar: androidx.media3.ui.TimeBar, position: Long, canceled: Boolean) {
+                override fun onScrubStop(position: Long) {
                     exoPlayer?.seekTo(position)
                     exoPlayer?.play()
                     scheduleMetadataHide()
                 }
-            })
+            }
     
             findViewById<View>(R.id.btnNext).setOnClickListener {
                 exoPlayer?.seekToNextMediaItem()
@@ -366,6 +368,7 @@ class PlayerActivity : AppCompatActivity() {
                 var locked = false
                 var muted = false
                 var needsSpeed = false
+                var currentSpeed = 1.0f
                 val latch = java.util.concurrent.CountDownLatch(1)
                 Handler(Looper.getMainLooper()).post {
                     playing = exoPlayer?.isPlaying ?: false
@@ -376,6 +379,7 @@ class PlayerActivity : AppCompatActivity() {
                     locked = isLocked
                     muted = exoPlayer?.volume == 0f
                     needsSpeed = isWaitingForSpeedChoice
+                    currentSpeed = exoPlayer?.playbackParameters?.speed ?: 1.0f
                     latch.countDown()
                 }
                 try { latch.await(1, java.util.concurrent.TimeUnit.SECONDS) } catch (e: Exception) {}
@@ -387,6 +391,7 @@ class PlayerActivity : AppCompatActivity() {
                 state.put("isLocked", locked)
                 state.put("isMuted", muted)
                 state.put("needsSpeedChoice", needsSpeed)
+                state.put("currentSpeed", currentSpeed.toDouble())
                 return state
             }
             override fun handleResumeChoice(choice: String) {

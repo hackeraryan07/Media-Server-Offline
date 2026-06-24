@@ -71,6 +71,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
     var isMuted by remember { mutableStateOf(false) }
     var needsSpeedChoice by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
+    var currentSpeed by remember { mutableStateOf(1.0f) }
 
     val options = remember(isMuted, isLocked) {
         listOf(
@@ -114,6 +115,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                                 isLocked = json.optBoolean("isLocked", false)
                                 isMuted = json.optBoolean("isMuted", false)
                                 needsSpeedChoice = json.optBoolean("needsSpeedChoice", false)
+                                currentSpeed = json.optDouble("currentSpeed", 1.0).toFloat()
                                 if (!isSeeking) {
                                     position = json.optLong("position", 0L)
                                 }
@@ -187,6 +189,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
             text = {
                 Column {
                     speeds.forEach { (label, value) ->
+                        val isSelected = kotlin.math.abs(value - currentSpeed) < 0.01f
                         TextButton(
                             onClick = {
                                 Thread {
@@ -196,9 +199,10 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                                 showSpeedDialog = false
                                 needsSpeedChoice = false
                             },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = if (isSelected) androidx.compose.material3.ButtonDefaults.textButtonColors(containerColor = Color(0xFFD3E3FD), contentColor = Color(0xFF041E49)) else androidx.compose.material3.ButtonDefaults.textButtonColors()
                         ) {
-                            Text(label)
+                            Text(label, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                         }
                     }
                 }

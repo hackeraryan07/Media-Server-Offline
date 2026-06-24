@@ -206,15 +206,17 @@
 			android:paddingBottom="12dp"
 			android:paddingTop="4dp">
 
-			<androidx.media3.ui.DefaultTimeBar
+			<com.example.tv.TvTimeBar
 				android:id="@+id/playerSeekBar"
 				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
+				android:layout_height="32dp"
 				android:layout_marginLeft="8dp"
 				android:layout_marginRight="8dp"
 				android:layout_marginBottom="2dp"
-				android:paddingLeft="0dp"
-				android:paddingRight="0dp" />
+				android:paddingLeft="12dp"
+				android:paddingRight="12dp"
+				android:focusable="true"
+				android:focusableInTouchMode="true" />
 
 			<LinearLayout
 				android:layout_width="match_parent"
