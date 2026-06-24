@@ -25,6 +25,7 @@ object TvRemoteServer {
         fun seekTo(positionMs: Long)
         fun getState(): JSONObject
         fun handleResumeChoice(choice: String)
+        fun triggerAction(action: String)
     }
 
     var playerController: PlayerController? = null
@@ -104,6 +105,11 @@ object TvRemoteServer {
                             "resume_choice" -> {
                                 params["choice"]?.let { choice ->
                                     playerController?.handleResumeChoice(choice)
+                                }
+                            }
+                            else -> {
+                                if (action != null) {
+                                    playerController?.triggerAction(action)
                                 }
                             }
                         }

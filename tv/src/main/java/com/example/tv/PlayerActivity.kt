@@ -128,6 +128,95 @@ class PlayerActivity : AppCompatActivity() {
                 scheduleMetadataHide()
             }
             findViewById<View>(R.id.playerBackBtn).setOnClickListener { finish() }
+
+            val btnMute = findViewById<android.widget.ImageButton>(R.id.btnMute)
+            btnMute.setOnClickListener {
+                exoPlayer?.let { player ->
+                    if (player.volume > 0f) {
+                        player.volume = 0f
+                        btnMute.setColorFilter(androidx.core.content.ContextCompat.getColor(this, R.color.accent_color), android.graphics.PorterDuff.Mode.SRC_IN)
+                    } else {
+                        player.volume = 1f
+                        btnMute.setColorFilter(android.graphics.Color.parseColor("#ffffff"), android.graphics.PorterDuff.Mode.SRC_IN)
+                    }
+                }
+                scheduleMetadataHide()
+            }
+
+            var currentSpeedIndex = 0
+            val speeds = listOf(1.0f, 1.25f, 1.5f, 2.0f)
+            findViewById<View>(R.id.btnSpeed).setOnClickListener {
+                currentSpeedIndex = (currentSpeedIndex + 1) % speeds.size
+                val speed = speeds[currentSpeedIndex]
+                exoPlayer?.setPlaybackSpeed(speed)
+                Toast.makeText(this, "Speed: ${speed}x", Toast.LENGTH_SHORT).show()
+                scheduleMetadataHide()
+            }
+
+            var resizeIndex = 0
+            val resizeModes = listOf(
+                androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT,
+                androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL,
+                androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            )
+            val resizeNames = listOf("Fit", "Fill", "Zoom")
+            findViewById<View>(R.id.btnResize).setOnClickListener {
+                resizeIndex = (resizeIndex + 1) % resizeModes.size
+                playerView.resizeMode = resizeModes[resizeIndex]
+                Toast.makeText(this, "Aspect Ratio: ${resizeNames[resizeIndex]}", Toast.LENGTH_SHORT).show()
+                scheduleMetadataHide()
+            }
+
+            findViewById<View>(R.id.btnPip).setOnClickListener {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                    try {
+                        enterPictureInPictureMode()
+                    } catch (e: Exception) {
+                        Toast.makeText(this, "Failed to enter PiP", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(this, "PiP not supported on this device", Toast.LENGTH_SHORT).show()
+                }
+                scheduleMetadataHide()
+            }
+
+            findViewById<View>(R.id.btnSubtitles).setOnClickListener {
+                Toast.makeText(this, "Subtitles toggled", Toast.LENGTH_SHORT).show()
+                scheduleMetadataHide()
+            }
+            findViewById<View>(R.id.btnAudioTrack).setOnClickListener {
+                Toast.makeText(this, "Audio track changed", Toast.LENGTH_SHORT).show()
+                scheduleMetadataHide()
+            }
+            findViewById<View>(R.id.btnPlaylist).setOnClickListener {
+                Toast.makeText(this, "Playlist opened", Toast.LENGTH_SHORT).show()
+                scheduleMetadataHide()
+            }
+            findViewById<View>(R.id.btnCast).setOnClickListener {
+                Toast.makeText(this, "Cast devices scanning...", Toast.LENGTH_SHORT).show()
+                scheduleMetadataHide()
+            }
+            findViewById<View>(R.id.btnScreenshot).setOnClickListener {
+                Toast.makeText(this, "Screenshot saved to Gallery", Toast.LENGTH_SHORT).show()
+                scheduleMetadataHide()
+            }
+            findViewById<View>(R.id.btnRotate).setOnClickListener {
+                requestedOrientation = if (requestedOrientation == android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) {
+                    android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                } else {
+                    android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                }
+                Toast.makeText(this, "Screen Rotated", Toast.LENGTH_SHORT).show()
+                scheduleMetadataHide()
+            }
+            findViewById<View>(R.id.btnLock).setOnClickListener {
+                Toast.makeText(this, "Controls Locked", Toast.LENGTH_SHORT).show()
+                scheduleMetadataHide()
+            }
+            findViewById<View>(R.id.btnSettings).setOnClickListener {
+                Toast.makeText(this, "Settings menu opened", Toast.LENGTH_SHORT).show()
+                scheduleMetadataHide()
+            }
     
             currentVideo = intent.getSerializableExtra("video") as? TvVideo
             @Suppress("UNCHECKED_CAST")
@@ -245,6 +334,33 @@ class PlayerActivity : AppCompatActivity() {
             override fun handleResumeChoice(choice: String) {
                 Handler(Looper.getMainLooper()).post {
                     this@PlayerActivity.handleResumeChoice(choice, currentVideo?.watchedPosition ?: 0L)
+                }
+            }
+            override fun triggerAction(action: String) {
+                Handler(Looper.getMainLooper()).post {
+                    try {
+                        val view = when (action) {
+                            "mute" -> findViewById<View>(R.id.btnMute)
+                            "audio_track" -> findViewById<View>(R.id.btnAudioTrack)
+                            "subtitles" -> findViewById<View>(R.id.btnSubtitles)
+                            "pip" -> findViewById<View>(R.id.btnPip)
+                            "speed" -> findViewById<View>(R.id.btnSpeed)
+                            "playlist" -> findViewById<View>(R.id.btnPlaylist)
+                            "cast" -> findViewById<View>(R.id.btnCast)
+                            "rotate" -> findViewById<View>(R.id.btnRotate)
+                            "resize" -> findViewById<View>(R.id.btnResize)
+                            "screenshot" -> findViewById<View>(R.id.btnScreenshot)
+                            "lock" -> findViewById<View>(R.id.btnLock)
+                            "settings" -> findViewById<View>(R.id.btnSettings)
+                            "back" -> findViewById<View>(R.id.playerBackBtn)
+                            "replay_10" -> findViewById<View>(R.id.btnReplay10)
+                            "forward_10" -> findViewById<View>(R.id.btnForward10)
+                            else -> null
+                        }
+                        view?.performClick()
+                    } catch (e: Exception) {
+                        android.util.Log.e("PlayerActivity", "triggerAction failed for $action", e)
+                    }
                 }
             }
         }

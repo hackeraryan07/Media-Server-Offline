@@ -13,12 +13,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,6 +33,13 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
+
+data class OptionItem(
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val action: String,
+    val description: String
+)
 
 class RemoteActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,6 +65,25 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
     var isSeeking by remember { mutableStateOf(false) }
     var needsResumeChoice by remember { mutableStateOf(false) }
     var resumePosition by remember { mutableStateOf(0L) }
+    var showBottomSheet by remember { mutableStateOf(false) }
+
+    val options = remember {
+        listOf(
+            OptionItem("Mute / Unmute", Icons.Default.VolumeOff, "mute", "Toggle audio volume"),
+            OptionItem("Audio Track", Icons.Default.Audiotrack, "audio_track", "Switch audio track"),
+            OptionItem("Subtitles", Icons.Default.Subtitles, "subtitles", "Toggle subtitles"),
+            OptionItem("Playback Speed", Icons.Default.Speed, "speed", "Change video speed"),
+            OptionItem("Aspect Ratio", Icons.Default.AspectRatio, "resize", "Fit, Fill or Zoom screen"),
+            OptionItem("PiP Mode", Icons.Default.PictureInPicture, "pip", "Picture in Picture"),
+            OptionItem("Screen Rotation", Icons.Default.ScreenRotation, "rotate", "Rotate TV playback orientation"),
+            OptionItem("Playlist", Icons.Default.PlaylistPlay, "playlist", "Open playlist overview"),
+            OptionItem("Cast Scan", Icons.Default.Cast, "cast", "Scan and connect to devices"),
+            OptionItem("Screenshot", Icons.Default.PhotoCamera, "screenshot", "Capture TV screen"),
+            OptionItem("Lock Controls", Icons.Default.Lock, "lock", "Lock video player overlays"),
+            OptionItem("System Settings", Icons.Default.Settings, "settings", "Open settings panel"),
+            OptionItem("TV Back Press", Icons.AutoMirrored.Filled.ArrowBack, "back", "Go back on TV")
+        )
+    }
     
     val client = remember { OkHttpClient() }
     val videoList = remember { ServerManager.localVideoServer?.getVideosList() ?: emptyList() }
@@ -142,6 +166,85 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                 }
             }
         )
+    }
+
+    if (showBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false },
+            containerColor = Color(0xFFF7F2FA),
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = "Advanced TV Controls",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF21005D),
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)
+                ) {
+                    items(options) { option ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    sendCommand(option.action)
+                                    showBottomSheet = false
+                                },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEADBFF))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(Color(0xFFEADDFF), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = option.icon,
+                                        contentDescription = option.label,
+                                        tint = Color(0xFF21005D),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = option.label,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF1C1B1F),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = option.description,
+                                    fontSize = 9.sp,
+                                    color = Color(0xFF49454F),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    lineHeight = 11.sp,
+                                    maxLines = 2
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     Scaffold(
@@ -273,6 +376,30 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                         ) {
                             Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = Color(0xFF21005D))
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Button(
+                        onClick = { showBottomSheet = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6750A4)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More Options",
+                            tint = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "More Options",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = Color.White
+                        )
                     }
                 }
             }

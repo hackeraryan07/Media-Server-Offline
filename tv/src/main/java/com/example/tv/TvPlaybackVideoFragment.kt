@@ -228,6 +228,9 @@ class TvPlaybackVideoFragment : VideoSupportFragment() {
                     this@TvPlaybackVideoFragment.handleResumeChoice(choice, currentVideo?.watchedPosition ?: 0L)
                 }
             }
+            override fun triggerAction(action: String) {
+                // Not supported/available in the classic Leanback Playback fragment
+            }
         }
     }
 
