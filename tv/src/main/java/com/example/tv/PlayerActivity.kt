@@ -42,6 +42,8 @@ class PlayerActivity : AppCompatActivity() {
     private var currentIndex: Int = 0
     private var currentVideo: TvVideo? = null
     private var isLocked = false
+    private var isWaitingForSpeedChoice = false
+    private var speedDialog: android.app.AlertDialog? = null
 
     private fun updateLockState() {
         val btnLock = findViewById<android.widget.ImageButton>(R.id.btnLock)
@@ -175,13 +177,26 @@ class PlayerActivity : AppCompatActivity() {
                 scheduleMetadataHide()
             }
 
-            var currentSpeedIndex = 0
-            val speeds = listOf(1.0f, 1.25f, 1.5f, 2.0f)
             findViewById<View>(R.id.btnSpeed).setOnClickListener {
-                currentSpeedIndex = (currentSpeedIndex + 1) % speeds.size
-                val speed = speeds[currentSpeedIndex]
-                exoPlayer?.setPlaybackSpeed(speed)
-                Toast.makeText(this, "Speed: ${speed}x", Toast.LENGTH_SHORT).show()
+                isWaitingForSpeedChoice = true
+                val speeds = arrayOf("0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x")
+                val speedValues = arrayOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
+                var selectedIndex = speedValues.indexOf(exoPlayer?.playbackParameters?.speed ?: 1.0f)
+                if (selectedIndex == -1) selectedIndex = 2
+                
+                speedDialog = android.app.AlertDialog.Builder(this@PlayerActivity)
+                    .setTitle("Playback Speed")
+                    .setSingleChoiceItems(speeds, selectedIndex) { dialog, which ->
+                        val selectedSpeed = speedValues[which]
+                        this@PlayerActivity.handleSpeedChoice(selectedSpeed)
+                    }
+                    .setOnCancelListener {
+                        isWaitingForSpeedChoice = false
+                        speedDialog = null
+                    }
+                    .create()
+                    
+                speedDialog?.show()
                 scheduleMetadataHide()
             }
 
@@ -350,6 +365,7 @@ class PlayerActivity : AppCompatActivity() {
                 var resumePos = 0L
                 var locked = false
                 var muted = false
+                var needsSpeed = false
                 val latch = java.util.concurrent.CountDownLatch(1)
                 Handler(Looper.getMainLooper()).post {
                     playing = exoPlayer?.isPlaying ?: false
@@ -359,6 +375,7 @@ class PlayerActivity : AppCompatActivity() {
                     resumePos = currentVideo?.watchedPosition ?: 0L
                     locked = isLocked
                     muted = exoPlayer?.volume == 0f
+                    needsSpeed = isWaitingForSpeedChoice
                     latch.countDown()
                 }
                 try { latch.await(1, java.util.concurrent.TimeUnit.SECONDS) } catch (e: Exception) {}
@@ -369,11 +386,17 @@ class PlayerActivity : AppCompatActivity() {
                 state.put("resumePosition", resumePos)
                 state.put("isLocked", locked)
                 state.put("isMuted", muted)
+                state.put("needsSpeedChoice", needsSpeed)
                 return state
             }
             override fun handleResumeChoice(choice: String) {
                 Handler(Looper.getMainLooper()).post {
                     this@PlayerActivity.handleResumeChoice(choice, currentVideo?.watchedPosition ?: 0L)
+                }
+            }
+            override fun handleSpeedChoice(speed: Float?) {
+                Handler(Looper.getMainLooper()).post {
+                    this@PlayerActivity.handleSpeedChoice(speed)
                 }
             }
             override fun triggerAction(action: String) {
@@ -505,6 +528,19 @@ class PlayerActivity : AppCompatActivity() {
         }
         exoPlayer?.playWhenReady = true
         exoPlayer?.play()
+    }
+
+    fun handleSpeedChoice(speed: Float?) {
+        isWaitingForSpeedChoice = false
+        if (speedDialog?.isShowing == true) {
+            speedDialog?.dismiss()
+        }
+        speedDialog = null
+        if (speed != null) {
+            exoPlayer?.setPlaybackSpeed(speed)
+            Toast.makeText(this, "Speed: ${speed}x", Toast.LENGTH_SHORT).show()
+        }
+        scheduleMetadataHide()
     }
 
     private fun formatTime(ms: Long): String {

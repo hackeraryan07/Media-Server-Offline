@@ -25,6 +25,7 @@ object TvRemoteServer {
         fun seekTo(positionMs: Long)
         fun getState(): JSONObject
         fun handleResumeChoice(choice: String)
+        fun handleSpeedChoice(speed: Float?)
         fun triggerAction(action: String)
     }
 
@@ -106,6 +107,14 @@ object TvRemoteServer {
                                 params["choice"]?.let { choice ->
                                     playerController?.handleResumeChoice(choice)
                                 }
+                            }
+                            "set_speed" -> {
+                                params["value"]?.toFloatOrNull()?.let { speed ->
+                                    playerController?.handleSpeedChoice(speed)
+                                }
+                            }
+                            "cancel_speed" -> {
+                                playerController?.handleSpeedChoice(null)
                             }
                             else -> {
                                 if (action != null) {

@@ -69,6 +69,8 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
     var showBottomSheet by remember { mutableStateOf(false) }
     var isLocked by remember { mutableStateOf(false) }
     var isMuted by remember { mutableStateOf(false) }
+    var needsSpeedChoice by remember { mutableStateOf(false) }
+    var showSpeedDialog by remember { mutableStateOf(false) }
 
     val options = remember(isMuted, isLocked) {
         listOf(
@@ -111,6 +113,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                                 resumePosition = json.optLong("resumePosition", 0L)
                                 isLocked = json.optBoolean("isLocked", false)
                                 isMuted = json.optBoolean("isMuted", false)
+                                needsSpeedChoice = json.optBoolean("needsSpeedChoice", false)
                                 if (!isSeeking) {
                                     position = json.optLong("position", 0L)
                                 }
@@ -173,6 +176,37 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
         )
     }
 
+    if (showSpeedDialog || needsSpeedChoice) {
+        val speeds = listOf("0.5x" to 0.5f, "0.75x" to 0.75f, "1.0x" to 1.0f, "1.25x" to 1.25f, "1.5x" to 1.5f, "2.0x" to 2.0f)
+        AlertDialog(
+            onDismissRequest = { 
+                showSpeedDialog = false
+                needsSpeedChoice = false
+            },
+            title = { Text("Playback Speed") },
+            text = {
+                Column {
+                    speeds.forEach { (label, value) ->
+                        TextButton(
+                            onClick = {
+                                Thread {
+                                    val request = Request.Builder().url("http://$tvIp:9000/command?action=set_speed&value=$value").build()
+                                    client.newCall(request).execute().close()
+                                }.start()
+                                showSpeedDialog = false
+                                needsSpeedChoice = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(label)
+                        }
+                    }
+                }
+            },
+            confirmButton = {}
+        )
+    }
+
     if (showBottomSheet) {
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
@@ -203,8 +237,13 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    sendCommand(option.action)
-                                    showBottomSheet = false
+                                    if (option.action == "speed") {
+                                        showSpeedDialog = true
+                                        showBottomSheet = false
+                                    } else {
+                                        sendCommand(option.action)
+                                        showBottomSheet = false
+                                    }
                                 },
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(containerColor = Color.White),
