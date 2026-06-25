@@ -66,8 +66,10 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
     var currentTitle by remember { mutableStateOf<String?>(null) }
     var currentVideoId by remember { mutableStateOf<String?>(null) }
     var position by remember { mutableStateOf(0L) }
+    var positionUpdateTime by remember { mutableStateOf(0L) }
     var duration by remember { mutableStateOf(0L) }
     var isSeeking by remember { mutableStateOf(false) }
+    var isShifting by remember { mutableStateOf(false) }
     var needsResumeChoice by remember { mutableStateOf(false) }
     var resumePosition by remember { mutableStateOf(0L) }
     var showBottomSheet by remember { mutableStateOf(false) }
@@ -109,24 +111,45 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
         }
     }
 
-    LaunchedEffect(isRemoteAudioEnabled, videoUrl, isPlaying, position, audioShiftMs) {
-        if (isRemoteAudioEnabled && videoUrl.isNotEmpty()) {
-            if (exoPlayer.currentMediaItem?.localConfiguration?.uri?.toString() != videoUrl) {
-                exoPlayer.setMediaItem(MediaItem.fromUri(videoUrl))
-                exoPlayer.prepare()
-            }
-            if (isPlaying) {
-                exoPlayer.play()
-            } else {
-                exoPlayer.pause()
-            }
-            val targetPos = position + audioShiftMs
-            if (kotlin.math.abs(exoPlayer.currentPosition - targetPos) > 2000) {
-                exoPlayer.seekTo(targetPos)
-            }
-        } else {
+    val currentAudioShift by rememberUpdatedState(audioShiftMs)
+    val currentPosition by rememberUpdatedState(position)
+    val currentPositionUpdateTime by rememberUpdatedState(positionUpdateTime)
+
+    LaunchedEffect(isRemoteAudioEnabled, videoUrl, isPlaying) {
+        if (!isRemoteAudioEnabled || videoUrl.isEmpty()) {
             exoPlayer.pause()
             exoPlayer.clearMediaItems()
+            return@LaunchedEffect
+        }
+        
+        if (exoPlayer.currentMediaItem?.localConfiguration?.uri?.toString() != videoUrl) {
+            exoPlayer.setMediaItem(MediaItem.fromUri(videoUrl))
+            exoPlayer.prepare()
+        }
+        
+        while (true) {
+            if (isPlaying) {
+                if (!exoPlayer.isPlaying) exoPlayer.play()
+                
+                val elapsedSinceUpdate = android.os.SystemClock.elapsedRealtime() - currentPositionUpdateTime
+                val expectedTvPos = currentPosition + elapsedSinceUpdate
+                val targetPos = expectedTvPos + currentAudioShift
+                
+                val diff = targetPos - exoPlayer.currentPosition
+                if (kotlin.math.abs(diff) > 1000) {
+                    exoPlayer.seekTo(targetPos)
+                } else if (kotlin.math.abs(diff) > 50) {
+                    val speed = if (diff > 0) 1.05f else 0.95f
+                    exoPlayer.setPlaybackSpeed(speed)
+                } else {
+                    exoPlayer.setPlaybackSpeed(1.0f)
+                }
+            } else {
+                if (exoPlayer.isPlaying) {
+                    exoPlayer.pause()
+                }
+            }
+            delay(100)
         }
     }
 
@@ -156,11 +179,14 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                                 needsSpeedChoice = json.optBoolean("needsSpeedChoice", false)
                                 currentSpeed = json.optDouble("currentSpeed", 1.0).toFloat()
                                 needsAudioShiftChoice = json.optBoolean("needsAudioShiftChoice", false)
-                                audioShiftMs = json.optLong("audioShiftMs", 0L)
+                                if (!isShifting) {
+                                    audioShiftMs = json.optLong("audioShiftMs", 0L)
+                                }
                                 isRemoteAudioEnabled = json.optBoolean("isRemoteAudioEnabled", false)
                                 videoUrl = json.optString("videoUrl", "")
                                 if (!isSeeking) {
                                     position = json.optLong("position", 0L)
+                                    positionUpdateTime = android.os.SystemClock.elapsedRealtime()
                                 }
                             }
                         }
@@ -254,10 +280,14 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                         Slider(
                             value = audioShiftMs.toFloat(),
                             onValueChange = { newVal ->
+                                isShifting = true
                                 val stepped = Math.round(newVal / 100f) * 100f
                                 audioShiftMs = stepped.toLong()
+                            },
+                            onValueChangeFinished = {
+                                isShifting = false
                                 Thread {
-                                    val request = Request.Builder().url("http://$tvIp:9000/command?action=set_audio_shift&value=${stepped.toLong()}").build()
+                                    val request = Request.Builder().url("http://$tvIp:9000/command?action=set_audio_shift&value=$audioShiftMs").build()
                                     client.newCall(request).execute().close()
                                 }.start()
                             },
