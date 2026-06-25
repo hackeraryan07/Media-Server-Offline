@@ -119,7 +119,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
         if (!isShifting && isRemoteAudioEnabled && isPlaying) {
             val elapsedSinceUpdate = android.os.SystemClock.elapsedRealtime() - currentPositionUpdateTime
             val expectedTvPos = currentPosition + elapsedSinceUpdate
-            val targetPos = expectedTvPos + audioShiftMs
+            val targetPos = expectedTvPos - audioShiftMs
             val diff = targetPos - exoPlayer.currentPosition
             if (kotlin.math.abs(diff) > 50) {
                 exoPlayer.seekTo(targetPos)
@@ -145,7 +145,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                 
                 val elapsedSinceUpdate = android.os.SystemClock.elapsedRealtime() - currentPositionUpdateTime
                 val expectedTvPos = currentPosition + elapsedSinceUpdate
-                val targetPos = expectedTvPos + currentAudioShift
+                val targetPos = expectedTvPos - currentAudioShift
                 
                 val diff = targetPos - exoPlayer.currentPosition
                 if (kotlin.math.abs(diff) > 2000) {
@@ -279,20 +279,20 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Button(onClick = {
-                            val newShift = (audioShiftMs - 100).coerceAtLeast(-60000)
+                            val newShift = (audioShiftMs - 50).coerceAtLeast(-60000)
                             audioShiftMs = newShift
                             Thread {
                                 val request = Request.Builder().url("http://$tvIp:9000/command?action=set_audio_shift&value=$newShift").build()
                                 client.newCall(request).execute().close()
                             }.start()
                         }) {
-                            Text("-0.1s")
+                            Text("-0.05s")
                         }
                         Slider(
                             value = audioShiftMs.toFloat(),
                             onValueChange = { newVal ->
                                 isShifting = true
-                                val stepped = Math.round(newVal / 100f) * 100f
+                                val stepped = Math.round(newVal / 50f) * 50f
                                 audioShiftMs = stepped.toLong()
                             },
                             onValueChangeFinished = {
@@ -303,18 +303,18 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                                 }.start()
                             },
                             valueRange = -60000f..60000f,
-                            steps = 1199,
+                            steps = 2399,
                             modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
                         )
                         Button(onClick = {
-                            val newShift = (audioShiftMs + 100).coerceAtMost(60000)
+                            val newShift = (audioShiftMs + 50).coerceAtMost(60000)
                             audioShiftMs = newShift
                             Thread {
                                 val request = Request.Builder().url("http://$tvIp:9000/command?action=set_audio_shift&value=$newShift").build()
                                 client.newCall(request).execute().close()
                             }.start()
                         }) {
-                            Text("+0.1s")
+                            Text("+0.05s")
                         }
                     }
                 }
