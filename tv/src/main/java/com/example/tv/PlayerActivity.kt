@@ -44,6 +44,7 @@ class PlayerActivity : AppCompatActivity() {
     private var currentVideo: TvVideo? = null
     private var isLocked = false
     private var isWaitingForSpeedChoice = false
+    private var isRemoteAudioEnabled = false
     private var speedDialog: android.app.AlertDialog? = null
 
     private fun updateLockState() {
@@ -74,6 +75,15 @@ class PlayerActivity : AppCompatActivity() {
         
         if (isLocked) {
             btnLock.requestFocus()
+        }
+    }
+
+    private fun updateAudioTrackButtonState() {
+        val btn = findViewById<android.widget.ImageButton>(R.id.btnAudioTrack)
+        if (isRemoteAudioEnabled) {
+            btn.setColorFilter(android.graphics.Color.YELLOW, android.graphics.PorterDuff.Mode.SRC_IN)
+        } else {
+            btn.clearColorFilter()
         }
     }
 
@@ -234,7 +244,10 @@ class PlayerActivity : AppCompatActivity() {
                 scheduleMetadataHide()
             }
             findViewById<View>(R.id.btnAudioTrack).setOnClickListener {
-                Toast.makeText(this, "Audio track changed", Toast.LENGTH_SHORT).show()
+                isRemoteAudioEnabled = !isRemoteAudioEnabled
+                val msg = if (isRemoteAudioEnabled) "Remote Audio Enabled" else "Remote Audio Disabled"
+                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                updateAudioTrackButtonState()
                 scheduleMetadataHide()
             }
             findViewById<View>(R.id.btnPlaylist).setOnClickListener {
@@ -392,6 +405,8 @@ class PlayerActivity : AppCompatActivity() {
                 state.put("isMuted", muted)
                 state.put("needsSpeedChoice", needsSpeed)
                 state.put("currentSpeed", currentSpeed.toDouble())
+                state.put("isRemoteAudioEnabled", isRemoteAudioEnabled)
+                state.put("videoUrl", currentVideo?.url ?: "")
                 return state
             }
             override fun handleResumeChoice(choice: String) {

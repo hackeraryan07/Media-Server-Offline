@@ -221,6 +221,8 @@ class TvPlaybackVideoFragment : VideoSupportFragment() {
                 state.put("duration", duration)
                 state.put("needsResumeChoice", needsResume)
                 state.put("resumePosition", resumePos)
+                state.put("isRemoteAudioEnabled", false)
+                state.put("videoUrl", currentVideo?.url ?: "")
                 return state
             }
             override fun handleResumeChoice(choice: String) {

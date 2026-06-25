@@ -33,6 +33,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.common.MediaItem
 import org.json.JSONObject
 
 data class OptionItem(
@@ -72,11 +74,13 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
     var needsSpeedChoice by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
     var currentSpeed by remember { mutableStateOf(1.0f) }
+    var isRemoteAudioEnabled by remember { mutableStateOf(false) }
+    var videoUrl by remember { mutableStateOf("") }
 
-    val options = remember(isMuted, isLocked) {
+    val options = remember(isMuted, isLocked, isRemoteAudioEnabled) {
         listOf(
             OptionItem(if (isMuted) "Unmute" else "Mute", if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp, "mute", "Toggle audio volume"),
-            OptionItem("Audio Track", Icons.Default.Audiotrack, "audio_track", "Switch audio track"),
+            OptionItem(if (isRemoteAudioEnabled) "Remote Audio On" else "Remote Audio Off", Icons.Default.Audiotrack, "audio_track", "Switch audio track"),
             OptionItem("Subtitles", Icons.Default.Subtitles, "subtitles", "Toggle subtitles"),
             OptionItem("Playback Speed", Icons.Default.Speed, "speed", "Change video speed"),
             OptionItem("Aspect Ratio", Icons.Default.AspectRatio, "resize", "Fit, Fill or Zoom screen"),
@@ -91,6 +95,35 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
         )
     }
     
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val exoPlayer = remember { ExoPlayer.Builder(context).build() }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayer.release()
+        }
+    }
+
+    LaunchedEffect(isRemoteAudioEnabled, videoUrl, isPlaying, position) {
+        if (isRemoteAudioEnabled && videoUrl.isNotEmpty()) {
+            if (exoPlayer.currentMediaItem?.localConfiguration?.uri?.toString() != videoUrl) {
+                exoPlayer.setMediaItem(MediaItem.fromUri(videoUrl))
+                exoPlayer.prepare()
+            }
+            if (isPlaying) {
+                exoPlayer.play()
+            } else {
+                exoPlayer.pause()
+            }
+            if (kotlin.math.abs(exoPlayer.currentPosition - position) > 2000) {
+                exoPlayer.seekTo(position)
+            }
+        } else {
+            exoPlayer.pause()
+            exoPlayer.clearMediaItems()
+        }
+    }
+
     val client = remember { OkHttpClient() }
     val videoList = remember { ServerManager.localVideoServer?.getVideosList() ?: emptyList() }
 
@@ -116,6 +149,8 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                                 isMuted = json.optBoolean("isMuted", false)
                                 needsSpeedChoice = json.optBoolean("needsSpeedChoice", false)
                                 currentSpeed = json.optDouble("currentSpeed", 1.0).toFloat()
+                                isRemoteAudioEnabled = json.optBoolean("isRemoteAudioEnabled", false)
+                                videoUrl = json.optString("videoUrl", "")
                                 if (!isSeeking) {
                                     position = json.optLong("position", 0L)
                                 }
