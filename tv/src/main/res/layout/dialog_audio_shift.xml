@@ -10,7 +10,7 @@
         android:id="@+id/btnMinus10"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="-10s" />
+        android:text="-0.1s" />
 
     <SeekBar
         android:id="@+id/shiftSeekBar"
@@ -36,6 +36,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:text="+10s" />
+        android:text="+0.1s" />
 
 </LinearLayout>

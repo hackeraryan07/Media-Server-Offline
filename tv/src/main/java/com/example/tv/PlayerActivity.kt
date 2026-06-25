@@ -604,10 +604,10 @@ class PlayerActivity : AppCompatActivity() {
         })
 
         btnMinus.setOnClickListener {
-            seekBar.progress = (seekBar.progress - 100).coerceAtLeast(0)
+            seekBar.progress = (seekBar.progress - 1).coerceAtLeast(0)
         }
         btnPlus.setOnClickListener {
-            seekBar.progress = (seekBar.progress + 100).coerceAtMost(1200)
+            seekBar.progress = (seekBar.progress + 1).coerceAtMost(1200)
         }
 
         audioShiftDialog = android.app.AlertDialog.Builder(this)

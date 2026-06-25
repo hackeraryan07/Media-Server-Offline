@@ -115,6 +115,18 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
     val currentPosition by rememberUpdatedState(position)
     val currentPositionUpdateTime by rememberUpdatedState(positionUpdateTime)
 
+    LaunchedEffect(audioShiftMs, isShifting) {
+        if (!isShifting && isRemoteAudioEnabled && isPlaying) {
+            val elapsedSinceUpdate = android.os.SystemClock.elapsedRealtime() - currentPositionUpdateTime
+            val expectedTvPos = currentPosition + elapsedSinceUpdate
+            val targetPos = expectedTvPos + audioShiftMs
+            val diff = targetPos - exoPlayer.currentPosition
+            if (kotlin.math.abs(diff) > 50) {
+                exoPlayer.seekTo(targetPos)
+            }
+        }
+    }
+
     LaunchedEffect(isRemoteAudioEnabled, videoUrl, isPlaying) {
         if (!isRemoteAudioEnabled || videoUrl.isEmpty()) {
             exoPlayer.pause()
@@ -136,12 +148,11 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                 val targetPos = expectedTvPos + currentAudioShift
                 
                 val diff = targetPos - exoPlayer.currentPosition
-                if (kotlin.math.abs(diff) > 1000) {
+                if (kotlin.math.abs(diff) > 2000) {
                     exoPlayer.seekTo(targetPos)
-                } else if (kotlin.math.abs(diff) > 50) {
-                    val speed = if (diff > 0) 1.05f else 0.95f
-                    exoPlayer.setPlaybackSpeed(speed)
-                } else {
+                }
+                
+                if (exoPlayer.playbackParameters.speed != 1.0f) {
                     exoPlayer.setPlaybackSpeed(1.0f)
                 }
             } else {
@@ -149,7 +160,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                     exoPlayer.pause()
                 }
             }
-            delay(100)
+            delay(1000)
         }
     }
 
@@ -268,14 +279,14 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Button(onClick = {
-                            val newShift = (audioShiftMs - 10000).coerceAtLeast(-60000)
+                            val newShift = (audioShiftMs - 100).coerceAtLeast(-60000)
                             audioShiftMs = newShift
                             Thread {
                                 val request = Request.Builder().url("http://$tvIp:9000/command?action=set_audio_shift&value=$newShift").build()
                                 client.newCall(request).execute().close()
                             }.start()
                         }) {
-                            Text("-10s")
+                            Text("-0.1s")
                         }
                         Slider(
                             value = audioShiftMs.toFloat(),
@@ -296,14 +307,14 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                             modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
                         )
                         Button(onClick = {
-                            val newShift = (audioShiftMs + 10000).coerceAtMost(60000)
+                            val newShift = (audioShiftMs + 100).coerceAtMost(60000)
                             audioShiftMs = newShift
                             Thread {
                                 val request = Request.Builder().url("http://$tvIp:9000/command?action=set_audio_shift&value=$newShift").build()
                                 client.newCall(request).execute().close()
                             }.start()
                         }) {
-                            Text("+10s")
+                            Text("+0.1s")
                         }
                     }
                 }
