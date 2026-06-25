@@ -587,12 +587,12 @@ class PlayerActivity : AppCompatActivity() {
         val btnPlus = view.findViewById<android.widget.Button>(R.id.btnPlus10)
 
         fun updateUI(progress: Int) {
-            val shift = (progress - 1200) * 50L
+            val shift = (progress - 600) * 100L
             saveAudioShift(shift)
             textValue.text = String.format("%.2fs", shift / 1000f)
         }
 
-        seekBar.progress = (audioShiftMs / 50).toInt() + 1200
+        seekBar.progress = (audioShiftMs / 100).toInt() + 600
         updateUI(seekBar.progress)
 
         seekBar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
@@ -607,7 +607,7 @@ class PlayerActivity : AppCompatActivity() {
             seekBar.progress = (seekBar.progress - 1).coerceAtLeast(0)
         }
         btnPlus.setOnClickListener {
-            seekBar.progress = (seekBar.progress + 1).coerceAtMost(2400)
+            seekBar.progress = (seekBar.progress + 1).coerceAtMost(1200)
         }
 
         audioShiftDialog = android.app.AlertDialog.Builder(this)
@@ -629,7 +629,7 @@ class PlayerActivity : AppCompatActivity() {
             saveAudioShift(shiftMs)
             if (audioShiftDialog?.isShowing == true) {
                 val seekBar = audioShiftDialog?.findViewById<android.widget.SeekBar>(R.id.shiftSeekBar)
-                seekBar?.progress = (shiftMs / 50).toInt() + 1200
+                seekBar?.progress = (shiftMs / 100).toInt() + 600
             }
         }
     }

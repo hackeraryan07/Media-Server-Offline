@@ -10,7 +10,7 @@
         android:id="@+id/btnMinus10"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="-0.05s" />
+        android:text="-0.1s" />
 
     <SeekBar
         android:id="@+id/shiftSeekBar"
@@ -19,8 +19,8 @@
         android:layout_weight="1"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:max="2400"
-        android:progress="1200" />
+        android:max="1200"
+        android:progress="600" />
         
     <TextView
         android:id="@+id/shiftValueText"
@@ -36,6 +36,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:text="+0.05s" />
+        android:text="+0.1s" />
 
 </LinearLayout>
