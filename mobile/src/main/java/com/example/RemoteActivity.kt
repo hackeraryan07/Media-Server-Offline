@@ -6,6 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -57,7 +59,7 @@ class RemoteActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
     var isPlaying by remember { mutableStateOf(false) }
@@ -73,7 +75,10 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
     var isMuted by remember { mutableStateOf(false) }
     var needsSpeedChoice by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
+    var needsAudioShiftChoice by remember { mutableStateOf(false) }
+    var showAudioShiftDialog by remember { mutableStateOf(false) }
     var currentSpeed by remember { mutableStateOf(1.0f) }
+    var audioShiftMs by remember { mutableStateOf(0L) }
     var isRemoteAudioEnabled by remember { mutableStateOf(false) }
     var videoUrl by remember { mutableStateOf("") }
 
@@ -104,7 +109,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
         }
     }
 
-    LaunchedEffect(isRemoteAudioEnabled, videoUrl, isPlaying, position) {
+    LaunchedEffect(isRemoteAudioEnabled, videoUrl, isPlaying, position, audioShiftMs) {
         if (isRemoteAudioEnabled && videoUrl.isNotEmpty()) {
             if (exoPlayer.currentMediaItem?.localConfiguration?.uri?.toString() != videoUrl) {
                 exoPlayer.setMediaItem(MediaItem.fromUri(videoUrl))
@@ -115,8 +120,9 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
             } else {
                 exoPlayer.pause()
             }
-            if (kotlin.math.abs(exoPlayer.currentPosition - position) > 2000) {
-                exoPlayer.seekTo(position)
+            val targetPos = position + audioShiftMs
+            if (kotlin.math.abs(exoPlayer.currentPosition - targetPos) > 2000) {
+                exoPlayer.seekTo(targetPos)
             }
         } else {
             exoPlayer.pause()
@@ -149,6 +155,8 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                                 isMuted = json.optBoolean("isMuted", false)
                                 needsSpeedChoice = json.optBoolean("needsSpeedChoice", false)
                                 currentSpeed = json.optDouble("currentSpeed", 1.0).toFloat()
+                                needsAudioShiftChoice = json.optBoolean("needsAudioShiftChoice", false)
+                                audioShiftMs = json.optLong("audioShiftMs", 0L)
                                 isRemoteAudioEnabled = json.optBoolean("isRemoteAudioEnabled", false)
                                 videoUrl = json.optString("videoUrl", "")
                                 if (!isSeeking) {
@@ -208,6 +216,78 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                     needsResumeChoice = false
                 }) {
                     Text("Start Over")
+                }
+            }
+        )
+    }
+
+    if (showAudioShiftDialog || needsAudioShiftChoice) {
+        AlertDialog(
+            onDismissRequest = {
+                showAudioShiftDialog = false
+                needsAudioShiftChoice = false
+                Thread {
+                    val request = Request.Builder().url("http://$tvIp:9000/command?action=cancel_audio_shift").build()
+                    client.newCall(request).execute().close()
+                }.start()
+            },
+            title = { Text("Audio Shift") },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(String.format("%.2fs", audioShiftMs / 1000f), fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(onClick = {
+                            val newShift = (audioShiftMs - 10000).coerceAtLeast(-60000)
+                            audioShiftMs = newShift
+                            Thread {
+                                val request = Request.Builder().url("http://$tvIp:9000/command?action=set_audio_shift&value=$newShift").build()
+                                client.newCall(request).execute().close()
+                            }.start()
+                        }) {
+                            Text("-10s")
+                        }
+                        Slider(
+                            value = audioShiftMs.toFloat(),
+                            onValueChange = { newVal ->
+                                val stepped = Math.round(newVal / 50f) * 50f
+                                audioShiftMs = stepped.toLong()
+                                Thread {
+                                    val request = Request.Builder().url("http://$tvIp:9000/command?action=set_audio_shift&value=${stepped.toLong()}").build()
+                                    client.newCall(request).execute().close()
+                                }.start()
+                            },
+                            valueRange = -60000f..60000f,
+                            steps = 2399,
+                            modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+                        )
+                        Button(onClick = {
+                            val newShift = (audioShiftMs + 10000).coerceAtMost(60000)
+                            audioShiftMs = newShift
+                            Thread {
+                                val request = Request.Builder().url("http://$tvIp:9000/command?action=set_audio_shift&value=$newShift").build()
+                                client.newCall(request).execute().close()
+                            }.start()
+                        }) {
+                            Text("+10s")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showAudioShiftDialog = false
+                    needsAudioShiftChoice = false
+                    Thread {
+                        val request = Request.Builder().url("http://$tvIp:9000/command?action=cancel_audio_shift").build()
+                        client.newCall(request).execute().close()
+                    }.start()
+                }) {
+                    Text("Close")
                 }
             }
         )
@@ -275,15 +355,28 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    if (option.action == "speed") {
-                                        showSpeedDialog = true
-                                        showBottomSheet = false
-                                    } else {
-                                        sendCommand(option.action)
-                                        showBottomSheet = false
+                                .combinedClickable(
+                                    onClick = {
+                                        if (option.action == "speed") {
+                                            showSpeedDialog = true
+                                            showBottomSheet = false
+                                        } else {
+                                            sendCommand(option.action)
+                                            if (option.action != "mute" && option.action != "lock" && option.action != "audio_track") {
+                                                showBottomSheet = false
+                                            }
+                                        }
+                                    },
+                                    onLongClick = {
+                                        if (option.action == "audio_track") {
+                                            Thread {
+                                                val request = Request.Builder().url("http://$tvIp:9000/command?action=request_audio_shift_dialog").build()
+                                                client.newCall(request).execute().close()
+                                            }.start()
+                                            showBottomSheet = false
+                                        }
                                     }
-                                },
+                                ),
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(containerColor = Color.White),
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEADBFF))

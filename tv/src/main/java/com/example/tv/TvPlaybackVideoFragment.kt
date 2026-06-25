@@ -221,6 +221,8 @@ class TvPlaybackVideoFragment : VideoSupportFragment() {
                 state.put("duration", duration)
                 state.put("needsResumeChoice", needsResume)
                 state.put("resumePosition", resumePos)
+                state.put("needsAudioShiftChoice", false)
+                state.put("audioShiftMs", 0L)
                 state.put("isRemoteAudioEnabled", false)
                 state.put("videoUrl", currentVideo?.url ?: "")
                 return state
@@ -232,6 +234,12 @@ class TvPlaybackVideoFragment : VideoSupportFragment() {
             }
             override fun handleSpeedChoice(speed: Float?) {
                 // Leanback doesn't easily support speed changes in this basic implementation, ignore for now
+            }
+            override fun handleAudioShiftChoice(shiftMs: Long?) {
+                // Not supported
+            }
+            override fun requestAudioShiftDialog() {
+                // Not supported
             }
             override fun triggerAction(action: String) {
                 // Not supported/available in the classic Leanback Playback fragment

@@ -26,7 +26,9 @@ object TvRemoteServer {
         fun getState(): JSONObject
         fun handleResumeChoice(choice: String)
         fun handleSpeedChoice(speed: Float?)
+        fun handleAudioShiftChoice(shiftMs: Long?)
         fun triggerAction(action: String)
+        fun requestAudioShiftDialog()
     }
 
     var playerController: PlayerController? = null
@@ -115,6 +117,17 @@ object TvRemoteServer {
                             }
                             "cancel_speed" -> {
                                 playerController?.handleSpeedChoice(null)
+                            }
+                            "set_audio_shift" -> {
+                                params["value"]?.toLongOrNull()?.let { shift ->
+                                    playerController?.handleAudioShiftChoice(shift)
+                                }
+                            }
+                            "cancel_audio_shift" -> {
+                                playerController?.handleAudioShiftChoice(null)
+                            }
+                            "request_audio_shift_dialog" -> {
+                                playerController?.requestAudioShiftDialog()
                             }
                             else -> {
                                 if (action != null) {

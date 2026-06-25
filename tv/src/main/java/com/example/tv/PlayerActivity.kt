@@ -45,7 +45,10 @@ class PlayerActivity : AppCompatActivity() {
     private var isLocked = false
     private var isWaitingForSpeedChoice = false
     private var isRemoteAudioEnabled = false
+    private var audioShiftMs: Long = 0L
+    private var isWaitingForAudioShiftChoice = false
     private var speedDialog: android.app.AlertDialog? = null
+    private var audioShiftDialog: android.app.AlertDialog? = null
 
     private fun updateLockState() {
         val btnLock = findViewById<android.widget.ImageButton>(R.id.btnLock)
@@ -250,6 +253,10 @@ class PlayerActivity : AppCompatActivity() {
                 updateAudioTrackButtonState()
                 scheduleMetadataHide()
             }
+            findViewById<View>(R.id.btnAudioTrack).setOnLongClickListener {
+                requestAudioShiftDialog()
+                true
+            }
             findViewById<View>(R.id.btnPlaylist).setOnClickListener {
                 Toast.makeText(this, "Playlist opened", Toast.LENGTH_SHORT).show()
                 scheduleMetadataHide()
@@ -382,6 +389,8 @@ class PlayerActivity : AppCompatActivity() {
                 var muted = false
                 var needsSpeed = false
                 var currentSpeed = 1.0f
+                var needsAudioShift = false
+                var currentAudioShift = 0L
                 val latch = java.util.concurrent.CountDownLatch(1)
                 Handler(Looper.getMainLooper()).post {
                     playing = exoPlayer?.isPlaying ?: false
@@ -393,6 +402,8 @@ class PlayerActivity : AppCompatActivity() {
                     muted = exoPlayer?.volume == 0f
                     needsSpeed = isWaitingForSpeedChoice
                     currentSpeed = exoPlayer?.playbackParameters?.speed ?: 1.0f
+                    needsAudioShift = isWaitingForAudioShiftChoice
+                    currentAudioShift = audioShiftMs
                     latch.countDown()
                 }
                 try { latch.await(1, java.util.concurrent.TimeUnit.SECONDS) } catch (e: Exception) {}
@@ -405,6 +416,8 @@ class PlayerActivity : AppCompatActivity() {
                 state.put("isMuted", muted)
                 state.put("needsSpeedChoice", needsSpeed)
                 state.put("currentSpeed", currentSpeed.toDouble())
+                state.put("needsAudioShiftChoice", needsAudioShift)
+                state.put("audioShiftMs", currentAudioShift)
                 state.put("isRemoteAudioEnabled", isRemoteAudioEnabled)
                 state.put("videoUrl", currentVideo?.url ?: "")
                 return state
@@ -418,6 +431,14 @@ class PlayerActivity : AppCompatActivity() {
                 Handler(Looper.getMainLooper()).post {
                     this@PlayerActivity.handleSpeedChoice(speed)
                 }
+            }
+            override fun handleAudioShiftChoice(shiftMs: Long?) {
+                Handler(Looper.getMainLooper()).post {
+                    this@PlayerActivity.handleAudioShiftChoice(shiftMs)
+                }
+            }
+            override fun requestAudioShiftDialog() {
+                this@PlayerActivity.requestAudioShiftDialog()
             }
             override fun triggerAction(action: String) {
                 Handler(Looper.getMainLooper()).post {
@@ -548,6 +569,70 @@ class PlayerActivity : AppCompatActivity() {
         }
         exoPlayer?.playWhenReady = true
         exoPlayer?.play()
+    }
+
+    private fun showAudioShiftDialog() {
+        val view = layoutInflater.inflate(R.layout.dialog_audio_shift, null)
+        val seekBar = view.findViewById<android.widget.SeekBar>(R.id.shiftSeekBar)
+        val textValue = view.findViewById<android.widget.TextView>(R.id.shiftValueText)
+        val btnMinus = view.findViewById<android.widget.Button>(R.id.btnMinus10)
+        val btnPlus = view.findViewById<android.widget.Button>(R.id.btnPlus10)
+
+        fun updateUI(progress: Int) {
+            val shift = (progress - 1200) * 50L
+            audioShiftMs = shift
+            textValue.text = String.format("%.2fs", shift / 1000f)
+        }
+
+        seekBar.progress = (audioShiftMs / 50).toInt() + 1200
+        updateUI(seekBar.progress)
+
+        seekBar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(p0: android.widget.SeekBar?, progress: Int, p2: Boolean) {
+                updateUI(progress)
+            }
+            override fun onStartTrackingTouch(p0: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(p0: android.widget.SeekBar?) {}
+        })
+
+        btnMinus.setOnClickListener {
+            seekBar.progress = (seekBar.progress - 200).coerceAtLeast(0)
+        }
+        btnPlus.setOnClickListener {
+            seekBar.progress = (seekBar.progress + 200).coerceAtMost(2400)
+        }
+
+        audioShiftDialog = android.app.AlertDialog.Builder(this)
+            .setTitle("Audio Shift")
+            .setView(view)
+            .setOnDismissListener {
+                isWaitingForAudioShiftChoice = false
+                audioShiftDialog = null
+            }
+            .show()
+    }
+
+    fun handleAudioShiftChoice(shiftMs: Long?) {
+        if (shiftMs == null) {
+            isWaitingForAudioShiftChoice = false
+            audioShiftDialog?.dismiss()
+            audioShiftDialog = null
+        } else {
+            audioShiftMs = shiftMs
+            if (audioShiftDialog?.isShowing == true) {
+                val seekBar = audioShiftDialog?.findViewById<android.widget.SeekBar>(R.id.shiftSeekBar)
+                seekBar?.progress = (shiftMs / 50).toInt() + 1200
+            }
+        }
+    }
+
+    fun requestAudioShiftDialog() {
+        isWaitingForAudioShiftChoice = true
+        Handler(Looper.getMainLooper()).post {
+            if (audioShiftDialog == null || audioShiftDialog?.isShowing == false) {
+                showAudioShiftDialog()
+            }
+        }
     }
 
     fun handleSpeedChoice(speed: Float?) {
