@@ -1,5 +1,6 @@
 package com.example.tv
 
+import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -47,6 +48,11 @@ class PlayerActivity : AppCompatActivity() {
     private var isRemoteAudioEnabled = false
     private var audioShiftMs: Long = 0L
     private var isWaitingForAudioShiftChoice = false
+
+    private fun saveAudioShift(shift: Long) {
+        audioShiftMs = shift
+        getSharedPreferences("PlayerPrefs", Context.MODE_PRIVATE).edit().putLong("audioShiftMs", shift).apply()
+    }
     private var speedDialog: android.app.AlertDialog? = null
     private var audioShiftDialog: android.app.AlertDialog? = null
 
@@ -123,6 +129,8 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val prefs = getSharedPreferences("PlayerPrefs", Context.MODE_PRIVATE)
+        audioShiftMs = prefs.getLong("audioShiftMs", 0L)
         try {
             super.onCreate(savedInstanceState)
             setContentView(R.layout.activity_player)
@@ -579,12 +587,12 @@ class PlayerActivity : AppCompatActivity() {
         val btnPlus = view.findViewById<android.widget.Button>(R.id.btnPlus10)
 
         fun updateUI(progress: Int) {
-            val shift = (progress - 1200) * 50L
-            audioShiftMs = shift
+            val shift = (progress - 600) * 100L
+            saveAudioShift(shift)
             textValue.text = String.format("%.2fs", shift / 1000f)
         }
 
-        seekBar.progress = (audioShiftMs / 50).toInt() + 1200
+        seekBar.progress = (audioShiftMs / 100).toInt() + 600
         updateUI(seekBar.progress)
 
         seekBar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
@@ -596,10 +604,10 @@ class PlayerActivity : AppCompatActivity() {
         })
 
         btnMinus.setOnClickListener {
-            seekBar.progress = (seekBar.progress - 200).coerceAtLeast(0)
+            seekBar.progress = (seekBar.progress - 100).coerceAtLeast(0)
         }
         btnPlus.setOnClickListener {
-            seekBar.progress = (seekBar.progress + 200).coerceAtMost(2400)
+            seekBar.progress = (seekBar.progress + 100).coerceAtMost(1200)
         }
 
         audioShiftDialog = android.app.AlertDialog.Builder(this)
@@ -618,10 +626,10 @@ class PlayerActivity : AppCompatActivity() {
             audioShiftDialog?.dismiss()
             audioShiftDialog = null
         } else {
-            audioShiftMs = shiftMs
+            saveAudioShift(shiftMs)
             if (audioShiftDialog?.isShowing == true) {
                 val seekBar = audioShiftDialog?.findViewById<android.widget.SeekBar>(R.id.shiftSeekBar)
-                seekBar?.progress = (shiftMs / 50).toInt() + 1200
+                seekBar?.progress = (shiftMs / 100).toInt() + 600
             }
         }
     }

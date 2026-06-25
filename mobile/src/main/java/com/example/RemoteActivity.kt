@@ -254,7 +254,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                         Slider(
                             value = audioShiftMs.toFloat(),
                             onValueChange = { newVal ->
-                                val stepped = Math.round(newVal / 50f) * 50f
+                                val stepped = Math.round(newVal / 100f) * 100f
                                 audioShiftMs = stepped.toLong()
                                 Thread {
                                     val request = Request.Builder().url("http://$tvIp:9000/command?action=set_audio_shift&value=${stepped.toLong()}").build()
@@ -262,7 +262,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                                 }.start()
                             },
                             valueRange = -60000f..60000f,
-                            steps = 2399,
+                            steps = 1199,
                             modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
                         )
                         Button(onClick = {
@@ -369,10 +369,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                                     },
                                     onLongClick = {
                                         if (option.action == "audio_track") {
-                                            Thread {
-                                                val request = Request.Builder().url("http://$tvIp:9000/command?action=request_audio_shift_dialog").build()
-                                                client.newCall(request).execute().close()
-                                            }.start()
+                                            showAudioShiftDialog = true
                                             showBottomSheet = false
                                         }
                                     }
