@@ -19,7 +19,6 @@ object AiHelper {
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
-        .protocols(listOf(okhttp3.Protocol.HTTP_1_1)) // Fallback to HTTP/1.1 for better compatibility on older devices
         .build()
 
     suspend fun generatePlaylist(context: Context, prompt: String): List<String> = withContext(Dispatchers.IO) {
@@ -81,15 +80,24 @@ object AiHelper {
             .post(requestBody)
             .build()
             
-        val response = client.newCall(request).execute()
+        val response = try {
+            client.newCall(request).execute()
+        } catch (e: java.net.UnknownHostException) {
+            throw Exception("Network Error: Unable to resolve host. Please check your internet connection. (${e.message})")
+        } catch (e: javax.net.ssl.SSLHandshakeException) {
+            throw Exception("SSL Error: Handshake failed. The device might not support the required TLS version. (${e.message})")
+        } catch (e: java.io.IOException) {
+            throw Exception("Network Error: ${e.javaClass.simpleName} - ${e.message}")
+        }
+        
         if (!response.isSuccessful) {
             val errorBody = response.body?.string() ?: ""
             Log.e("AiHelper", "API Error body: $errorBody")
             if (response.code == 403) {
-                throw Exception("Error 403: Forbidden. Your API Key is likely invalid, restricted, or not enabled for this service.")
+                throw Exception("Error 403: Forbidden. API Key invalid/restricted.\nDetails: $errorBody")
             }
             if (response.code == 503) {
-                throw Exception("Error 503: Service Unavailable. The server might be overloaded or experiencing regional issues.")
+                throw Exception("Error 503: Service Unavailable. Server overloaded.\nDetails: $errorBody")
             }
             throw Exception("API Error: ${response.code} ${response.message}\n$errorBody")
         }
