@@ -19,6 +19,7 @@ object AiHelper {
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
+        .protocols(listOf(okhttp3.Protocol.HTTP_1_1)) // Force HTTP/1.1 for better compatibility on older Android versions (like Android 9)
         .build()
 
     suspend fun generatePlaylist(context: Context, prompt: String): List<String> = withContext(Dispatchers.IO) {
@@ -86,18 +87,31 @@ object AiHelper {
             throw Exception("Network Error: Unable to resolve host. Please check your internet connection. (${e.message})")
         } catch (e: javax.net.ssl.SSLHandshakeException) {
             throw Exception("SSL Error: Handshake failed. The device might not support the required TLS version. (${e.message})")
+        } catch (e: java.net.SocketTimeoutException) {
+            throw Exception("Timeout Error: The request took too long to complete. (${e.message})")
         } catch (e: java.io.IOException) {
-            throw Exception("Network Error: ${e.javaClass.simpleName} - ${e.message}")
+            throw Exception("Network Error (${e.javaClass.simpleName}): ${e.message}")
+        } catch (e: Exception) {
+            throw Exception("Unexpected Error (${e.javaClass.simpleName}): ${e.message}")
         }
         
         if (!response.isSuccessful) {
             val errorBody = response.body?.string() ?: ""
             Log.e("AiHelper", "API Error body: $errorBody")
+            if (response.code == 400) {
+                throw Exception("Error 400: Bad Request. The prompt might be invalid.\nDetails: $errorBody")
+            }
             if (response.code == 403) {
                 throw Exception("Error 403: Forbidden. API Key invalid/restricted.\nDetails: $errorBody")
             }
+            if (response.code == 429) {
+                throw Exception("Error 429: Too Many Requests. You have exceeded your API quota.\nDetails: $errorBody")
+            }
+            if (response.code == 500) {
+                throw Exception("Error 500: Internal Server Error. The Gemini API encountered an issue.\nDetails: $errorBody")
+            }
             if (response.code == 503) {
-                throw Exception("Error 503: Service Unavailable. Server overloaded.\nDetails: $errorBody")
+                throw Exception("Error 503: Service Unavailable. The server is temporarily overloaded or down.\nDetails: $errorBody")
             }
             throw Exception("API Error: ${response.code} ${response.message}\n$errorBody")
         }

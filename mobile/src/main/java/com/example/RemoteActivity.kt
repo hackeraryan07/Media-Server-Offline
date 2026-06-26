@@ -33,6 +33,7 @@ import com.example.server.ServerManager
 import com.example.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -141,7 +142,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
             exoPlayer.prepare()
         }
         
-        while (true) {
+        while (isActive) {
             if (isPlaying) {
                 if (!exoPlayer.isPlaying) exoPlayer.play()
                 
@@ -150,19 +151,30 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                 val targetPos = expectedTvPos + currentAudioShift
                 
                 val diff = targetPos - exoPlayer.currentPosition
-                if (kotlin.math.abs(diff) > 2000) {
+                if (kotlin.math.abs(diff) > 500) {
                     exoPlayer.seekTo(targetPos)
-                }
-                
-                if (exoPlayer.playbackParameters.speed != 1.0f) {
-                    exoPlayer.setPlaybackSpeed(1.0f)
+                    if (exoPlayer.playbackParameters.speed != 1.0f) {
+                        exoPlayer.setPlaybackSpeed(1.0f)
+                    }
+                } else if (diff > 50) {
+                    if (exoPlayer.playbackParameters.speed != 1.05f) {
+                        exoPlayer.setPlaybackSpeed(1.05f)
+                    }
+                } else if (diff < -50) {
+                    if (exoPlayer.playbackParameters.speed != 0.95f) {
+                        exoPlayer.setPlaybackSpeed(0.95f)
+                    }
+                } else {
+                    if (exoPlayer.playbackParameters.speed != 1.0f) {
+                        exoPlayer.setPlaybackSpeed(1.0f)
+                    }
                 }
             } else {
                 if (exoPlayer.isPlaying) {
                     exoPlayer.pause()
                 }
             }
-            delay(1000)
+            delay(100) // Run more frequently for tighter sync
         }
     }
 
