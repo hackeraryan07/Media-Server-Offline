@@ -84,8 +84,8 @@ jobs:
           printf '%s\n' '<?xml version="1.0" encoding="utf-8"?>' '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">' '    <background android:drawable="@android:color/white"/>' '    <foreground android:drawable="@android:color/black"/>' '</adaptive-icon>' > mobile/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
         fi
 
-    - name: Build Mobile and TV debug APKs
-      run: ./gradlew :mobile:assembleDebug :tv:assembleDebug
+    - name: Build Mobile, TV and Remote Audio debug APKs
+      run: ./gradlew :mobile:assembleDebug :tv:assembleDebug :remoteaudio:assembleDebug
 
     - name: Upload Mobile Debug APK
       uses: actions/upload-artifact@v4
@@ -98,3 +98,9 @@ jobs:
       with:
         name: tv-stream-client-debug
         path: tv/build/outputs/apk/debug/tv-debug.apk
+
+    - name: Upload Remote Audio Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: remote-audio-client-debug
+        path: remoteaudio/build/outputs/apk/debug/remoteaudio-debug.apk

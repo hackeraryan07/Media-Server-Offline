@@ -26,3 +26,4 @@ rootProject.name = "Video Wifi Streamer"
 
 include(":mobile")
 include(":tv")
+include(":remoteaudio")

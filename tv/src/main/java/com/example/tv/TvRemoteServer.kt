@@ -2,6 +2,8 @@ package com.example.tv
 
 import android.content.Context
 import android.content.Intent
+import android.net.nsd.NsdManager
+import android.net.nsd.NsdServiceInfo
 import android.util.Log
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -15,6 +17,8 @@ object TvRemoteServer {
     private var serverSocket: ServerSocket? = null
     private var isRunning = false
     private var context: Context? = null
+    private var nsdManager: NsdManager? = null
+    private var registrationListener: NsdManager.RegistrationListener? = null
 
     interface PlayerController {
         fun play()
@@ -41,6 +45,24 @@ object TvRemoteServer {
             try {
                 serverSocket = ServerSocket(9000)
                 Log.d("TvRemoteServer", "Started on 9000")
+                
+                // Register NSD
+                nsdManager = context?.getSystemService(Context.NSD_SERVICE) as? NsdManager
+                val serviceInfo = NsdServiceInfo().apply {
+                    serviceName = "TvClient"
+                    serviceType = "_tvremote._tcp"
+                    port = 9000
+                }
+                registrationListener = object : NsdManager.RegistrationListener {
+                    override fun onServiceRegistered(info: NsdServiceInfo) {
+                        Log.d("TvRemoteServer", "NSD Registered: ${info.serviceName}")
+                    }
+                    override fun onRegistrationFailed(info: NsdServiceInfo, errorCode: Int) {}
+                    override fun onServiceUnregistered(info: NsdServiceInfo) {}
+                    override fun onUnregistrationFailed(info: NsdServiceInfo, errorCode: Int) {}
+                }
+                nsdManager?.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
+
                 while (isRunning) {
                     val socket = serverSocket?.accept() ?: break
                     handleClient(socket)
@@ -55,8 +77,12 @@ object TvRemoteServer {
 
     fun stop() {
         isRunning = false
+        try {
+            registrationListener?.let { nsdManager?.unregisterService(it) }
+        } catch (e: Exception) {}
         serverSocket?.close()
     }
+
 
     private fun handleClient(socket: Socket) {
         thread {
