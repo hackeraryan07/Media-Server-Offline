@@ -85,6 +85,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
     var currentSpeed by remember { mutableStateOf(1.0f) }
     var audioShiftMs by remember { mutableStateOf(0L) }
     var isRemoteAudioEnabled by remember { mutableStateOf(false) }
+    var needsAudioSyncStopChoice by remember { mutableStateOf(false) }
     var videoUrl by remember { mutableStateOf("") }
 
     val options = remember(isMuted, isLocked, isRemoteAudioEnabled) {
@@ -117,12 +118,11 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
     val currentAudioShift by rememberUpdatedState(audioShiftMs)
     val currentPosition by rememberUpdatedState(position)
     val currentPositionUpdateTime by rememberUpdatedState(positionUpdateTime)
-    val currentSpeedState by rememberUpdatedState(currentSpeed)
 
     LaunchedEffect(audioShiftMs, isShifting) {
         if (!isShifting && isRemoteAudioEnabled && isPlaying) {
             val elapsedSinceUpdate = android.os.SystemClock.elapsedRealtime() - currentPositionUpdateTime
-            val expectedTvPos = currentPosition + (elapsedSinceUpdate * currentSpeedState).toLong()
+            val expectedTvPos = currentPosition + elapsedSinceUpdate
             val targetPos = expectedTvPos + audioShiftMs
             val diff = targetPos - exoPlayer.currentPosition
             if (kotlin.math.abs(diff) > 50) {
@@ -147,29 +147,33 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
             if (isPlaying) {
                 if (!exoPlayer.isPlaying) exoPlayer.play()
                 
-                val elapsedSinceUpdate = android.os.SystemClock.elapsedRealtime() - currentPositionUpdateTime
-                val expectedTvPos = currentPosition + (elapsedSinceUpdate * currentSpeedState).toLong()
-                val targetPos = expectedTvPos + currentAudioShift
-                
-                val diff = targetPos - exoPlayer.currentPosition
-                if (kotlin.math.abs(diff) > 1000) {
-                    exoPlayer.seekTo(targetPos)
-                    if (exoPlayer.playbackParameters.speed != currentSpeedState) {
-                        exoPlayer.setPlaybackSpeed(currentSpeedState)
-                    }
-                } else if (diff > 50) {
-                    val spd = (currentSpeedState + 0.05f).coerceAtMost(2.0f)
-                    if (exoPlayer.playbackParameters.speed != spd) {
-                        exoPlayer.setPlaybackSpeed(spd)
-                    }
-                } else if (diff < -50) {
-                    val spd = (currentSpeedState - 0.05f).coerceAtLeast(0.1f)
-                    if (exoPlayer.playbackParameters.speed != spd) {
-                        exoPlayer.setPlaybackSpeed(spd)
+                if (needsAudioSyncStopChoice) {
+                    val elapsedSinceUpdate = android.os.SystemClock.elapsedRealtime() - currentPositionUpdateTime
+                    val expectedTvPos = currentPosition + elapsedSinceUpdate
+                    val targetPos = expectedTvPos + currentAudioShift
+                    
+                    val diff = targetPos - exoPlayer.currentPosition
+                    if (kotlin.math.abs(diff) > 500) {
+                        exoPlayer.seekTo(targetPos)
+                        if (exoPlayer.playbackParameters.speed != 1.0f) {
+                            exoPlayer.setPlaybackSpeed(1.0f)
+                        }
+                    } else if (diff > 50) {
+                        if (exoPlayer.playbackParameters.speed != 1.05f) {
+                            exoPlayer.setPlaybackSpeed(1.05f)
+                        }
+                    } else if (diff < -50) {
+                        if (exoPlayer.playbackParameters.speed != 0.95f) {
+                            exoPlayer.setPlaybackSpeed(0.95f)
+                        }
+                    } else {
+                        if (exoPlayer.playbackParameters.speed != 1.0f) {
+                            exoPlayer.setPlaybackSpeed(1.0f)
+                        }
                     }
                 } else {
-                    if (exoPlayer.playbackParameters.speed != currentSpeedState) {
-                        exoPlayer.setPlaybackSpeed(currentSpeedState)
+                    if (exoPlayer.playbackParameters.speed != 1.0f) {
+                        exoPlayer.setPlaybackSpeed(1.0f)
                     }
                 }
             } else {
@@ -185,22 +189,16 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
     val videoList = remember { ServerManager.localVideoServer?.getVideosList() ?: emptyList() }
 
     LaunchedEffect(tvIp) {
-        var lastVideoId: String? = null
-        var lastIsPlaying = false
         while (true) {
             try {
-                val requestTime = android.os.SystemClock.elapsedRealtime()
                 val request = Request.Builder().url("http://$tvIp:9000/state").build()
                 withContext(Dispatchers.IO) {
                     client.newCall(request).execute().use { response ->
                         if (response.isSuccessful) {
-                            val responseTime = android.os.SystemClock.elapsedRealtime()
-                            val rtt = responseTime - requestTime
                             val body = response.body?.string()
                             if (body != null) {
                                 val json = JSONObject(body)
-                                val newIsPlaying = json.optBoolean("isPlaying", false)
-                                isPlaying = newIsPlaying
+                                isPlaying = json.optBoolean("isPlaying", false)
                                 val t = json.optString("title", "")
                                 currentTitle = if (t.isNotBlank()) t else null
                                 val vId = json.optString("videoId", "")
@@ -211,25 +209,18 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                                 isLocked = json.optBoolean("isLocked", false)
                                 isMuted = json.optBoolean("isMuted", false)
                                 needsSpeedChoice = json.optBoolean("needsSpeedChoice", false)
-                                val newSpeed = json.optDouble("currentSpeed", 1.0).toFloat()
-                                currentSpeed = newSpeed
+                                currentSpeed = json.optDouble("currentSpeed", 1.0).toFloat()
                                 needsAudioShiftChoice = json.optBoolean("needsAudioShiftChoice", false)
                                 if (!isShifting) {
                                     audioShiftMs = json.optLong("audioShiftMs", 0L)
                                 }
+                                needsAudioSyncStopChoice = json.optBoolean("needsAudioSyncStopChoice", false)
                                 isRemoteAudioEnabled = json.optBoolean("isRemoteAudioEnabled", false)
                                 videoUrl = json.optString("videoUrl", "")
                                 if (!isSeeking) {
-                                    val newPosition = json.optLong("position", 0L)
-                                    val expectedPos = position + if (isPlaying) ((responseTime - positionUpdateTime) * newSpeed).toLong() else 0L
-                                    val timeDiff = kotlin.math.abs(newPosition - expectedPos)
-                                    if (timeDiff > 1500 || (newIsPlaying && !lastIsPlaying) || vId != lastVideoId) {
-                                        position = newPosition + (rtt / 2)
-                                        positionUpdateTime = responseTime
-                                    }
+                                    position = json.optLong("position", 0L)
+                                    positionUpdateTime = android.os.SystemClock.elapsedRealtime()
                                 }
-                                lastIsPlaying = newIsPlaying
-                                lastVideoId = vId
                             }
                         }
                     }
@@ -252,6 +243,22 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                 Log.e("RemoteActivity", "Command failed: $action", e)
             }
         }.start()
+    }
+
+    if (needsAudioSyncStopChoice) {
+        AlertDialog(
+            onDismissRequest = { /* No dismiss */ },
+            title = { Text("Audio Syncing") },
+            text = { Text("Continuous audio syncing is active. When the audio sounds perfectly synced, press Stop Syncing.") },
+            confirmButton = {
+                TextButton(onClick = { 
+                    sendCommand("stop_syncing")
+                    needsAudioSyncStopChoice = false
+                }) {
+                    Text("Stop Syncing")
+                }
+            }
+        )
     }
 
     if (needsResumeChoice) {
