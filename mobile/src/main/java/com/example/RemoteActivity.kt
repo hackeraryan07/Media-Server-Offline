@@ -107,81 +107,18 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
     }
     
     val context = androidx.compose.ui.platform.LocalContext.current
-    val exoPlayer = remember { ExoPlayer.Builder(context).build() }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            exoPlayer.release()
-        }
-    }
-
-    val currentAudioShift by rememberUpdatedState(audioShiftMs)
-    val currentPosition by rememberUpdatedState(position)
-    val currentPositionUpdateTime by rememberUpdatedState(positionUpdateTime)
-
-    LaunchedEffect(audioShiftMs, isShifting) {
-        if (!isShifting && isRemoteAudioEnabled && isPlaying) {
-            val elapsedSinceUpdate = android.os.SystemClock.elapsedRealtime() - currentPositionUpdateTime
-            val expectedTvPos = currentPosition + elapsedSinceUpdate
-            val targetPos = expectedTvPos + audioShiftMs
-            val diff = targetPos - exoPlayer.currentPosition
-            if (kotlin.math.abs(diff) > 50) {
-                exoPlayer.seekTo(targetPos)
+    
+    LaunchedEffect(isRemoteAudioEnabled) {
+        if (isRemoteAudioEnabled) {
+            val intent = android.content.Intent(context, com.example.server.AudioSyncService::class.java).apply {
+                action = com.example.server.AudioSyncService.ACTION_START
+                putExtra(com.example.server.AudioSyncService.EXTRA_TV_IP, tvIp)
             }
-        }
-    }
-
-    LaunchedEffect(isRemoteAudioEnabled, videoUrl, isPlaying) {
-        if (!isRemoteAudioEnabled || videoUrl.isEmpty()) {
-            exoPlayer.pause()
-            exoPlayer.clearMediaItems()
-            return@LaunchedEffect
-        }
-        
-        if (exoPlayer.currentMediaItem?.localConfiguration?.uri?.toString() != videoUrl) {
-            exoPlayer.setMediaItem(MediaItem.fromUri(videoUrl))
-            exoPlayer.prepare()
-        }
-        
-        while (isActive) {
-            if (isPlaying) {
-                if (!exoPlayer.isPlaying) exoPlayer.play()
-                
-                if (needsAudioSyncStopChoice) {
-                    val elapsedSinceUpdate = android.os.SystemClock.elapsedRealtime() - currentPositionUpdateTime
-                    val expectedTvPos = currentPosition + elapsedSinceUpdate
-                    val targetPos = expectedTvPos + currentAudioShift
-                    
-                    val diff = targetPos - exoPlayer.currentPosition
-                    if (kotlin.math.abs(diff) > 500) {
-                        exoPlayer.seekTo(targetPos)
-                        if (exoPlayer.playbackParameters.speed != 1.0f) {
-                            exoPlayer.setPlaybackSpeed(1.0f)
-                        }
-                    } else if (diff > 50) {
-                        if (exoPlayer.playbackParameters.speed != 1.05f) {
-                            exoPlayer.setPlaybackSpeed(1.05f)
-                        }
-                    } else if (diff < -50) {
-                        if (exoPlayer.playbackParameters.speed != 0.95f) {
-                            exoPlayer.setPlaybackSpeed(0.95f)
-                        }
-                    } else {
-                        if (exoPlayer.playbackParameters.speed != 1.0f) {
-                            exoPlayer.setPlaybackSpeed(1.0f)
-                        }
-                    }
-                } else {
-                    if (exoPlayer.playbackParameters.speed != 1.0f) {
-                        exoPlayer.setPlaybackSpeed(1.0f)
-                    }
-                }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
             } else {
-                if (exoPlayer.isPlaying) {
-                    exoPlayer.pause()
-                }
+                context.startService(intent)
             }
-            delay(100) // Run more frequently for tighter sync
         }
     }
 
