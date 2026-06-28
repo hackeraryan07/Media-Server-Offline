@@ -428,6 +428,7 @@ class PlayerActivity : AppCompatActivity() {
                 state.put("currentSpeed", currentSpeed.toDouble())
                 state.put("needsAudioShiftChoice", needsAudioShift)
                 state.put("audioShiftMs", currentAudioShift)
+                state.put("isContinuousSyncEnabled", isContinuousSyncEnabled)
                 state.put("isRemoteAudioEnabled", isRemoteAudioEnabled)
                 state.put("videoUrl", currentVideo?.url ?: "")
                 return state
@@ -453,7 +454,17 @@ class PlayerActivity : AppCompatActivity() {
             override fun triggerAction(action: String) {
                 Handler(Looper.getMainLooper()).post {
                     try {
-
+                        if (action == "toggle_continuous_sync") {
+                            isContinuousSyncEnabled = !isContinuousSyncEnabled
+                            val msg = if (isContinuousSyncEnabled) "Continuous Sync Enabled" else "Continuous Sync Disabled"
+                            Toast.makeText(this@PlayerActivity, msg, Toast.LENGTH_SHORT).show()
+                            
+                            val btn = audioShiftDialog?.findViewById<android.widget.Button>(R.id.btnToggleSync)
+                            if (btn != null) {
+                                btn.text = if (isContinuousSyncEnabled) "Stop Syncing" else "Start Syncing"
+                            }
+                            return@post
+                        }
                         val view = when (action) {
                             "mute" -> findViewById<View>(R.id.btnMute)
                             "audio_track" -> findViewById<View>(R.id.btnAudioTrack)
@@ -597,13 +608,12 @@ class PlayerActivity : AppCompatActivity() {
             textValue.text = String.format("%.2fs", shift / 1000f)
         }
         
-        btnToggleSync.text = if (isRemoteAudioEnabled) "Turn Remote Audio OFF" else "Turn Remote Audio ON"
+        btnToggleSync.text = if (isContinuousSyncEnabled) "Stop Syncing" else "Start Syncing"
         btnToggleSync.setOnClickListener {
-            isRemoteAudioEnabled = !isRemoteAudioEnabled
-            val msg = if (isRemoteAudioEnabled) "Remote Audio Enabled" else "Remote Audio Disabled"
+            isContinuousSyncEnabled = !isContinuousSyncEnabled
+            val msg = if (isContinuousSyncEnabled) "Continuous Sync Enabled" else "Continuous Sync Disabled"
             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-            updateAudioTrackButtonState()
-            btnToggleSync.text = if (isRemoteAudioEnabled) "Turn Remote Audio OFF" else "Turn Remote Audio ON"
+            btnToggleSync.text = if (isContinuousSyncEnabled) "Stop Syncing" else "Start Syncing"
         }
 
         seekBar.progress = (audioShiftMs / 100).toInt() + 600

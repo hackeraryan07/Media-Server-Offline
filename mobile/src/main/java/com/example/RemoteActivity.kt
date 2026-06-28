@@ -85,6 +85,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
     var currentSpeed by remember { mutableStateOf(1.0f) }
     var audioShiftMs by remember { mutableStateOf(0L) }
     var isRemoteAudioEnabled by remember { mutableStateOf(false) }
+    var isContinuousSyncEnabled by remember { mutableStateOf(true) }
     var videoUrl by remember { mutableStateOf("") }
 
     val options = remember(isMuted, isLocked, isRemoteAudioEnabled) {
@@ -151,6 +152,7 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                                     audioShiftMs = json.optLong("audioShiftMs", 0L)
                                 }
                                 isRemoteAudioEnabled = json.optBoolean("isRemoteAudioEnabled", false)
+                                isContinuousSyncEnabled = json.optBoolean("isContinuousSyncEnabled", true)
                                 videoUrl = json.optString("videoUrl", "")
                                 if (!isSeeking) {
                                     position = json.optLong("position", 0L)
@@ -275,8 +277,8 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                         }
                     }
                     Spacer(modifier = Modifier.height(24.dp))
-                    Button(onClick = { sendCommand("audio_track") }) {
-                        Text(if (isRemoteAudioEnabled) "Turn Remote Audio OFF" else "Turn Remote Audio ON")
+                    Button(onClick = { sendCommand("toggle_continuous_sync") }) {
+                        Text(if (isContinuousSyncEnabled) "Stop Syncing" else "Start Syncing")
                     }
                 }
             },

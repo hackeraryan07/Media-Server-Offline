@@ -48,7 +48,7 @@ class AudioSyncService : Service() {
     private var clockOffset: Long? = null
     private var audioShiftMs = 0L
     private var videoUrl = ""
-    private var needsAudioSyncStopChoice = false
+    private var isContinuousSyncEnabled = true
     private var isRemoteAudioEnabled = true
     private var currentTitle = ""
 
@@ -115,7 +115,7 @@ class AudioSyncService : Service() {
                             val t = json.optString("title", "")
                             if (t.isNotBlank()) currentTitle = t
                             audioShiftMs = json.optLong("audioShiftMs", 0L)
-                            needsAudioSyncStopChoice = json.optBoolean("needsAudioSyncStopChoice", false)
+                            isContinuousSyncEnabled = json.optBoolean("isContinuousSyncEnabled", true)
                             isRemoteAudioEnabled = json.optBoolean("isRemoteAudioEnabled", false)
                             val newVideoUrl = json.optString("videoUrl", "")
                             if (newVideoUrl != videoUrl) {
@@ -162,22 +162,28 @@ class AudioSyncService : Service() {
         if (isPlaying) {
             if (!player.isPlaying) player.play()
             
-            val targetPos = android.os.SystemClock.elapsedRealtime() + (clockOffset ?: 0L) + audioShiftMs
-            
-            val diff = targetPos - player.currentPosition
-            
-            if (kotlin.math.abs(diff) > 1000) {
-                player.seekTo(targetPos)
-                if (player.playbackParameters.speed != 1.0f) {
-                    player.setPlaybackSpeed(1.0f)
+            if (isContinuousSyncEnabled) {
+                val targetPos = android.os.SystemClock.elapsedRealtime() + (clockOffset ?: 0L) + audioShiftMs
+                
+                val diff = targetPos - player.currentPosition
+                
+                if (kotlin.math.abs(diff) > 1000) {
+                    player.seekTo(targetPos)
+                    if (player.playbackParameters.speed != 1.0f) {
+                        player.setPlaybackSpeed(1.0f)
+                    }
+                } else if (kotlin.math.abs(diff) > 30) {
+                    val correction = (diff / 300.0f).coerceIn(-0.1f, 0.1f)
+                    val newSpeed = 1.0f + correction
+                    if (kotlin.math.abs(player.playbackParameters.speed - newSpeed) > 0.02f) {
+                        player.setPlaybackSpeed(newSpeed)
+                    }
+                } else if (kotlin.math.abs(diff) < 15) {
+                    if (player.playbackParameters.speed != 1.0f) {
+                        player.setPlaybackSpeed(1.0f)
+                    }
                 }
-            } else if (kotlin.math.abs(diff) > 30) {
-                val correction = (diff / 300.0f).coerceIn(-0.1f, 0.1f)
-                val newSpeed = 1.0f + correction
-                if (kotlin.math.abs(player.playbackParameters.speed - newSpeed) > 0.02f) {
-                    player.setPlaybackSpeed(newSpeed)
-                }
-            } else if (kotlin.math.abs(diff) < 15) {
+            } else {
                 if (player.playbackParameters.speed != 1.0f) {
                     player.setPlaybackSpeed(1.0f)
                 }
