@@ -103,8 +103,11 @@ class AudioSyncService : Service() {
         if (tvIp == null) return
         try {
             val request = Request.Builder().url("http://$tvIp:9000/state").build()
+            val requestStartTime = android.os.SystemClock.elapsedRealtime()
             withContext(Dispatchers.IO) {
                 client.newCall(request).execute().use { response ->
+                    val requestEndTime = android.os.SystemClock.elapsedRealtime()
+                    val rtt = requestEndTime - requestStartTime
                     if (response.isSuccessful) {
                         val body = response.body?.string()
                         if (body != null) {
@@ -131,10 +134,10 @@ class AudioSyncService : Service() {
                             val isSeeking = false // We assume no seeking here since we just want to follow the TV. Or if TV seeks, we get new position.
                             // The TV state returns the current position.
                             val newPosition = json.optLong("position", 0L)
-                            // We should only update our expected position if it diverged significantly, or just always update the base time.
-                            // Actually, let's just always use the latest position from the TV as our base.
-                            position = newPosition
-                            positionUpdateTime = android.os.SystemClock.elapsedRealtime()
+                            
+                            // Approximate TV position right now = position from TV + (half RTT)
+                            position = newPosition + (rtt / 2)
+                            positionUpdateTime = requestEndTime
                             
                             updateNotification("Syncing: $currentTitle")
                         }
@@ -156,44 +159,28 @@ class AudioSyncService : Service() {
         if (isPlaying) {
             if (!player.isPlaying) player.play()
             
-            if (needsAudioSyncStopChoice) {
-                val elapsedSinceUpdate = android.os.SystemClock.elapsedRealtime() - positionUpdateTime
-                val expectedTvPos = position + elapsedSinceUpdate
-                val targetPos = expectedTvPos + audioShiftMs
-                
-                val diff = targetPos - player.currentPosition
-                if (kotlin.math.abs(diff) > 500) {
-                    player.seekTo(targetPos)
-                    if (player.playbackParameters.speed != 1.0f) {
-                        player.setPlaybackSpeed(1.0f)
-                    }
-                } else if (diff > 50) {
-                    if (player.playbackParameters.speed != 1.05f) {
-                        player.setPlaybackSpeed(1.05f)
-                    }
-                } else if (diff < -50) {
-                    if (player.playbackParameters.speed != 0.95f) {
-                        player.setPlaybackSpeed(0.95f)
-                    }
-                } else {
-                    if (player.playbackParameters.speed != 1.0f) {
-                        player.setPlaybackSpeed(1.0f)
-                    }
+            val elapsedSinceUpdate = android.os.SystemClock.elapsedRealtime() - positionUpdateTime
+            val expectedTvPos = position + elapsedSinceUpdate
+            val targetPos = expectedTvPos + audioShiftMs
+            
+            val diff = targetPos - player.currentPosition
+            
+            if (kotlin.math.abs(diff) > 1000) {
+                player.seekTo(targetPos)
+                if (player.playbackParameters.speed != 1.0f) {
+                    player.setPlaybackSpeed(1.0f)
+                }
+            } else if (diff > 50) {
+                if (player.playbackParameters.speed != 1.03f) {
+                    player.setPlaybackSpeed(1.03f)
+                }
+            } else if (diff < -50) {
+                if (player.playbackParameters.speed != 0.97f) {
+                    player.setPlaybackSpeed(0.97f)
                 }
             } else {
                 if (player.playbackParameters.speed != 1.0f) {
                     player.setPlaybackSpeed(1.0f)
-                }
-                
-                // If not syncing (user stopped syncing), we might still need to seek if it diverges wildly (e.g. paused/played), 
-                // but if we are just playing, we let ExoPlayer play at 1.0x.
-                // Wait, if TV paused and played, the diff might be large.
-                val elapsedSinceUpdate = android.os.SystemClock.elapsedRealtime() - positionUpdateTime
-                val expectedTvPos = position + elapsedSinceUpdate
-                val targetPos = expectedTvPos + audioShiftMs
-                val diff = targetPos - player.currentPosition
-                if (kotlin.math.abs(diff) > 2000) { // Big jump, definitely seek
-                    player.seekTo(targetPos)
                 }
             }
         } else {
