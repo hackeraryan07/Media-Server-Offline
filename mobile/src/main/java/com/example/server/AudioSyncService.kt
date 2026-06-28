@@ -45,8 +45,7 @@ class AudioSyncService : Service() {
 
     // State
     private var isPlaying = false
-    private var position = 0L
-    private var positionUpdateTime = 0L
+    private var clockOffset: Long? = null
     private var audioShiftMs = 0L
     private var videoUrl = ""
     private var needsAudioSyncStopChoice = false
@@ -83,7 +82,7 @@ class AudioSyncService : Service() {
             launch {
                 while (isActive) {
                     pollState()
-                    delay(1000)
+                    delay(500)
                 }
             }
             // Audio update loop
@@ -94,7 +93,7 @@ class AudioSyncService : Service() {
                     break
                 }
                 updateAudioPlayback()
-                delay(100)
+                delay(50)
             }
         }
     }
@@ -135,9 +134,13 @@ class AudioSyncService : Service() {
                             // The TV state returns the current position.
                             val newPosition = json.optLong("position", 0L)
                             
-                            // Approximate TV position right now = position from TV + (half RTT)
-                            position = newPosition + (rtt / 2)
-                            positionUpdateTime = requestEndTime
+                            val currentOffset = newPosition - (requestStartTime + rtt / 2)
+                            val prevOffset = clockOffset
+                            if (prevOffset == null || kotlin.math.abs(currentOffset - prevOffset) > 1000) {
+                                clockOffset = currentOffset
+                            } else {
+                                clockOffset = (prevOffset * 0.8 + currentOffset * 0.2).toLong()
+                            }
                             
                             updateNotification("Syncing: $currentTitle")
                         }
@@ -159,9 +162,7 @@ class AudioSyncService : Service() {
         if (isPlaying) {
             if (!player.isPlaying) player.play()
             
-            val elapsedSinceUpdate = android.os.SystemClock.elapsedRealtime() - positionUpdateTime
-            val expectedTvPos = position + elapsedSinceUpdate
-            val targetPos = expectedTvPos + audioShiftMs
+            val targetPos = android.os.SystemClock.elapsedRealtime() + (clockOffset ?: 0L) + audioShiftMs
             
             val diff = targetPos - player.currentPosition
             
@@ -170,15 +171,13 @@ class AudioSyncService : Service() {
                 if (player.playbackParameters.speed != 1.0f) {
                     player.setPlaybackSpeed(1.0f)
                 }
-            } else if (diff > 50) {
-                if (player.playbackParameters.speed != 1.03f) {
-                    player.setPlaybackSpeed(1.03f)
+            } else if (kotlin.math.abs(diff) > 30) {
+                val correction = (diff / 300.0f).coerceIn(-0.1f, 0.1f)
+                val newSpeed = 1.0f + correction
+                if (kotlin.math.abs(player.playbackParameters.speed - newSpeed) > 0.02f) {
+                    player.setPlaybackSpeed(newSpeed)
                 }
-            } else if (diff < -50) {
-                if (player.playbackParameters.speed != 0.97f) {
-                    player.setPlaybackSpeed(0.97f)
-                }
-            } else {
+            } else if (kotlin.math.abs(diff) < 15) {
                 if (player.playbackParameters.speed != 1.0f) {
                     player.setPlaybackSpeed(1.0f)
                 }
