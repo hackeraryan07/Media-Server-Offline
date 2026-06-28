@@ -48,7 +48,7 @@ class PlayerActivity : AppCompatActivity() {
     private var isRemoteAudioEnabled = false
     private var audioShiftMs: Long = 0L
     private var isWaitingForAudioShiftChoice = false
-    private var isWaitingForAudioSyncStop = false
+    private var isContinuousSyncEnabled = true // defaultly keep sync on
 
     private fun saveAudioShift(shift: Long) {
         audioShiftMs = shift
@@ -56,7 +56,6 @@ class PlayerActivity : AppCompatActivity() {
     }
     private var speedDialog: android.app.AlertDialog? = null
     private var audioShiftDialog: android.app.AlertDialog? = null
-    private var audioSyncStopDialog: android.app.AlertDialog? = null
 
     private fun updateLockState() {
         val btnLock = findViewById<android.widget.ImageButton>(R.id.btnLock)
@@ -262,12 +261,7 @@ class PlayerActivity : AppCompatActivity() {
                 Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                 updateAudioTrackButtonState()
                 scheduleMetadataHide()
-                if (isRemoteAudioEnabled) {
-                    requestAudioSyncStopDialog()
-                } else {
-                    isWaitingForAudioSyncStop = false
-                    audioSyncStopDialog?.dismiss()
-                }
+
             }
             findViewById<View>(R.id.btnAudioTrack).setOnLongClickListener {
                 requestAudioShiftDialog()
@@ -407,7 +401,6 @@ class PlayerActivity : AppCompatActivity() {
                 var currentSpeed = 1.0f
                 var needsAudioShift = false
                 var currentAudioShift = 0L
-                var needsAudioSyncStop = false
                 val latch = java.util.concurrent.CountDownLatch(1)
                 Handler(Looper.getMainLooper()).post {
                     playing = exoPlayer?.isPlaying ?: false
@@ -421,7 +414,6 @@ class PlayerActivity : AppCompatActivity() {
                     currentSpeed = exoPlayer?.playbackParameters?.speed ?: 1.0f
                     needsAudioShift = isWaitingForAudioShiftChoice
                     currentAudioShift = audioShiftMs
-                    needsAudioSyncStop = isWaitingForAudioSyncStop
                     latch.countDown()
                 }
                 try { latch.await(1, java.util.concurrent.TimeUnit.SECONDS) } catch (e: Exception) {}
@@ -435,7 +427,6 @@ class PlayerActivity : AppCompatActivity() {
                 state.put("needsSpeedChoice", needsSpeed)
                 state.put("currentSpeed", currentSpeed.toDouble())
                 state.put("needsAudioShiftChoice", needsAudioShift)
-                state.put("needsAudioSyncStopChoice", needsAudioSyncStop)
                 state.put("audioShiftMs", currentAudioShift)
                 state.put("isRemoteAudioEnabled", isRemoteAudioEnabled)
                 state.put("videoUrl", currentVideo?.url ?: "")
@@ -462,10 +453,7 @@ class PlayerActivity : AppCompatActivity() {
             override fun triggerAction(action: String) {
                 Handler(Looper.getMainLooper()).post {
                     try {
-                        if (action == "stop_syncing") {
-                            this@PlayerActivity.handleAudioSyncStopChoice()
-                            return@post
-                        }
+
                         val view = when (action) {
                             "mute" -> findViewById<View>(R.id.btnMute)
                             "audio_track" -> findViewById<View>(R.id.btnAudioTrack)
@@ -517,10 +505,7 @@ class PlayerActivity : AppCompatActivity() {
                         videoUrlString = video.url
                         showMetadataTemp()
                         
-                        if (isRemoteAudioEnabled) {
-                            requestAudioSyncStopDialog()
-                        }
-                        
+
                         if ((reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || 
                              reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK || 
                              reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED)) {
@@ -568,9 +553,6 @@ class PlayerActivity : AppCompatActivity() {
                 if (isPlaying) {
                     btnPlayPause.setImageResource(R.drawable.ic_pause_flat)
                     scheduleMetadataHide()
-                    if (isRemoteAudioEnabled) {
-                        requestAudioSyncStopDialog()
-                    }
                 } else {
                     btnPlayPause.setImageResource(R.drawable.ic_play_flat)
                     hideHandler.removeCallbacks(hideRunnable)
@@ -607,11 +589,21 @@ class PlayerActivity : AppCompatActivity() {
         val textValue = view.findViewById<android.widget.TextView>(R.id.shiftValueText)
         val btnMinus = view.findViewById<android.widget.Button>(R.id.btnMinus10)
         val btnPlus = view.findViewById<android.widget.Button>(R.id.btnPlus10)
+        val btnToggleSync = view.findViewById<android.widget.Button>(R.id.btnToggleSync)
 
         fun updateUI(progress: Int) {
             val shift = (progress - 600) * 100L
             saveAudioShift(shift)
             textValue.text = String.format("%.2fs", shift / 1000f)
+        }
+        
+        btnToggleSync.text = if (isRemoteAudioEnabled) "Turn Remote Audio OFF" else "Turn Remote Audio ON"
+        btnToggleSync.setOnClickListener {
+            isRemoteAudioEnabled = !isRemoteAudioEnabled
+            val msg = if (isRemoteAudioEnabled) "Remote Audio Enabled" else "Remote Audio Disabled"
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+            updateAudioTrackButtonState()
+            btnToggleSync.text = if (isRemoteAudioEnabled) "Turn Remote Audio OFF" else "Turn Remote Audio ON"
         }
 
         seekBar.progress = (audioShiftMs / 100).toInt() + 600
@@ -665,33 +657,6 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    fun requestAudioSyncStopDialog() {
-        isWaitingForAudioSyncStop = true
-        Handler(Looper.getMainLooper()).post {
-            if (audioSyncStopDialog == null || audioSyncStopDialog?.isShowing == false) {
-                audioSyncStopDialog = android.app.AlertDialog.Builder(this@PlayerActivity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                    .setTitle("Audio Syncing")
-                    .setMessage("Continuous audio syncing is active. When the audio sounds perfectly synced, press Stop Syncing.")
-                    .setPositiveButton("Stop Syncing") { _, _ ->
-                        handleAudioSyncStopChoice()
-                    }
-                    .setOnDismissListener {
-                        isWaitingForAudioSyncStop = false
-                        audioSyncStopDialog = null
-                    }
-                    .setCancelable(false)
-                    .show()
-            }
-        }
-    }
-
-    fun handleAudioSyncStopChoice() {
-        isWaitingForAudioSyncStop = false
-        if (audioSyncStopDialog?.isShowing == true) {
-            audioSyncStopDialog?.dismiss()
-        }
-        audioSyncStopDialog = null
-    }
 
     fun handleSpeedChoice(speed: Float?) {
         isWaitingForSpeedChoice = false

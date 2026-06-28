@@ -85,7 +85,6 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
     var currentSpeed by remember { mutableStateOf(1.0f) }
     var audioShiftMs by remember { mutableStateOf(0L) }
     var isRemoteAudioEnabled by remember { mutableStateOf(false) }
-    var needsAudioSyncStopChoice by remember { mutableStateOf(false) }
     var videoUrl by remember { mutableStateOf("") }
 
     val options = remember(isMuted, isLocked, isRemoteAudioEnabled) {
@@ -151,7 +150,6 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                                 if (!isShifting) {
                                     audioShiftMs = json.optLong("audioShiftMs", 0L)
                                 }
-                                needsAudioSyncStopChoice = json.optBoolean("needsAudioSyncStopChoice", false)
                                 isRemoteAudioEnabled = json.optBoolean("isRemoteAudioEnabled", false)
                                 videoUrl = json.optString("videoUrl", "")
                                 if (!isSeeking) {
@@ -180,22 +178,6 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                 Log.e("RemoteActivity", "Command failed: $action", e)
             }
         }.start()
-    }
-
-    if (needsAudioSyncStopChoice) {
-        AlertDialog(
-            onDismissRequest = { /* No dismiss */ },
-            title = { Text("Audio Syncing") },
-            text = { Text("Continuous audio syncing is active. When the audio sounds perfectly synced, press Stop Syncing.") },
-            confirmButton = {
-                TextButton(onClick = { 
-                    sendCommand("stop_syncing")
-                    needsAudioSyncStopChoice = false
-                }) {
-                    Text("Stop Syncing")
-                }
-            }
-        )
     }
 
     if (needsResumeChoice) {
@@ -291,6 +273,10 @@ fun RemoteScreen(tvIp: String, onBack: () -> Unit) {
                         }) {
                             Text("+0.1s")
                         }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(onClick = { sendCommand("audio_track") }) {
+                        Text(if (isRemoteAudioEnabled) "Turn Remote Audio OFF" else "Turn Remote Audio ON")
                     }
                 }
             },
