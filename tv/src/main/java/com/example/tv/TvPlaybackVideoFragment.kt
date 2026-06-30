@@ -62,7 +62,27 @@ class TvPlaybackVideoFragment : VideoSupportFragment() {
     private fun initializePlayer() {
         videoUrlString = currentVideo?.url
 
-        exoPlayer = ExoPlayer.Builder(requireContext()).build()
+        val extractorsFactory = androidx.media3.extractor.DefaultExtractorsFactory()
+            .setConstantBitrateSeekingEnabled(true)
+            .setConstantBitrateSeekingAlwaysEnabled(true)
+            
+        val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(requireContext())
+            .setEnableDecoderFallback(true)
+            .setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+            
+        val loadErrorHandlingPolicy = object : androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy() {
+            override fun getMinimumLoadableRetryCount(dataType: Int): Int {
+                return Int.MAX_VALUE
+            }
+        }
+        
+        val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(requireContext(), extractorsFactory)
+            .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+
+        exoPlayer = ExoPlayer.Builder(requireContext())
+            .setMediaSourceFactory(mediaSourceFactory)
+            .setRenderersFactory(renderersFactory)
+            .build()
         
         val items = mutableListOf<MediaItem>()
         if (!playlist.isNullOrEmpty()) {

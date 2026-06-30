@@ -51,7 +51,28 @@ class AudioSyncService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        exoPlayer = ExoPlayer.Builder(applicationContext).build()
+        
+        val extractorsFactory = androidx.media3.extractor.DefaultExtractorsFactory()
+            .setConstantBitrateSeekingEnabled(true)
+            .setConstantBitrateSeekingAlwaysEnabled(true)
+            
+        val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(applicationContext)
+            .setEnableDecoderFallback(true)
+            .setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+            
+        val loadErrorHandlingPolicy = object : androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy() {
+            override fun getMinimumLoadableRetryCount(dataType: Int): Int {
+                return Int.MAX_VALUE
+            }
+        }
+        
+        val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(applicationContext, extractorsFactory)
+            .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+            
+        exoPlayer = ExoPlayer.Builder(applicationContext)
+            .setMediaSourceFactory(mediaSourceFactory)
+            .setRenderersFactory(renderersFactory)
+            .build()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

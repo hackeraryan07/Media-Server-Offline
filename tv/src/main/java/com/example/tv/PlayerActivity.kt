@@ -330,7 +330,28 @@ class PlayerActivity : AppCompatActivity() {
         videoUrlString = currentVideo?.url
         titleText.text = currentVideo?.title
         
-        exoPlayer = ExoPlayer.Builder(this).build()
+        val extractorsFactory = androidx.media3.extractor.DefaultExtractorsFactory()
+            .setConstantBitrateSeekingEnabled(true)
+            .setConstantBitrateSeekingAlwaysEnabled(true)
+            
+        val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(this)
+            .setEnableDecoderFallback(true)
+            .setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+            
+        val loadErrorHandlingPolicy = object : androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy() {
+            override fun getMinimumLoadableRetryCount(dataType: Int): Int {
+                return Int.MAX_VALUE
+            }
+        }
+        
+        val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(this, extractorsFactory)
+            .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+        
+        exoPlayer = ExoPlayer.Builder(this)
+            .setMediaSourceFactory(mediaSourceFactory)
+            .setRenderersFactory(renderersFactory)
+            .build()
+            
         playerView.player = exoPlayer
         
         val items = mutableListOf<MediaItem>()
